@@ -8,9 +8,9 @@ export default function Header() {
         
         {/* Navigation */}
         <nav className="hidden md:flex space-x-6 text-gray-300 text-sm font-medium">
-          <span className="hover:text-white transition">Home</span>
+          <span className="hover:text-white transition">Browse Games</span>
           <span className="hover:text-white transition">Leaderboard</span>
-          <span className="hover:text-white transition">Markets</span>
+          <span className="hover:text-white transition">Bank</span>
         </nav>
         
         {/* Connect Wallet Placeholder */}
