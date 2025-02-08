@@ -9,14 +9,30 @@ import LoginPage from './routes/LoginPage';
 
 import Root from './routes/Root';
 import ErrorPage from './routes/ErrorPage';
-import App from './App';
+import Bank from "./routes/Bank";
+import GameBrowser from "./routes/GameBrowser";
+import LeaderBoard from "./routes/LeaderBoard";
+
 
 const router = createBrowserRouter([
   {
     path: "/",
     element: <Root />,
-
-  
+    errorElement: <ErrorPage />,
+    children: [
+      {
+        path: "bank",
+        element: <Bank />,
+      },
+      {
+        path: "browseGames",
+        element: <GameBrowser />,
+      },
+      {
+        path: "leaderBoard",
+        element: <LeaderBoard />,
+      },
+    ],
   },
 ]);
 

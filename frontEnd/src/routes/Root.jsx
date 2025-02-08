@@ -1,15 +1,25 @@
 import React from 'react'
 import Header from '../components/Header'
-import GameBrowser from './GameBrowser'
-import TradePage from './TradePage'
+
+import Bank from './Bank'
+import { Outlet, Link } from "react-router-dom";
+
 
 function Root() {
   return (
     <div>
         <Header/>
         <div>
-            <TradePage/>
+
         </div>
+
+            
+        </div>
+        <div id="detail">
+        <Outlet context={[]} />
+      </div>
+
+
     </div>
   )
 }
