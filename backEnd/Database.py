@@ -1,6 +1,11 @@
 import sqlite3
 import uuid
 
+#Creates an instance of the connection
+def connect():
+    conn = sqlite3.connect('PVPTradingDatabase.db')
+    return conn
+
 # Creates a new user in the database.
 def createUser(usrID, usrNm, wallID):
     conn = sqlite3.connect('PVPTradingDatabase.db')
@@ -29,6 +34,15 @@ def withdrawGems(usrID,withdrawal):
     cursor.execute("UPDATE User SET Gems = ? WHERE UserID = ?", (balance,usrID))
     conn.commit()
     conn.close()
+    
+def checkNumOfGems(usrID):
+    conn = connect()
+    cursor = conn.cursor()
+    cursor.execute("SELECT Gems FROM User WHERE UserID = ?",(usrID))
+    balance = cursor.fetchall()
+    conn.close()
+    return balance
+
 
 # Creates a new crypto wallet information instance for a user.
 def createWallet(wallID,pubKey,privKey):
