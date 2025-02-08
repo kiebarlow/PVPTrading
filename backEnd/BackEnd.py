@@ -15,29 +15,58 @@ def hello_world():
 def on_connect():
     emit('lobby_list', lobbies)
     
-# Create a new lobby.
 @socketio.on('create_lobby')
-def create_lobby(data):
-    # data should include a unique lobby id and lobby name
+def handle_create_lobby(data):
+    """
+    Expected data: {
+      'lobby_id': unique identifier,
+      'lobby_name': display name,
+      'min_coins': minimum coins required to join (e.g., 50)
+    }
+    """
     lobby_id = data.get('lobby_id')
     lobby_name = data.get('lobby_name')
+    min_coins = data.get('min_coins', 0)
+    
     if lobby_id and lobby_id not in lobbies:
-        lobbies[lobby_id] = {'name': lobby_name, 'players': []}
-        # Broadcast the updated lobby list to all connected clients.
+        lobbies[lobby_id] = {
+            'name': lobby_name,
+            'players': [],
+            'min_coins': min_coins,
+        }
+        # Broadcast updated lobby list to all connected clients.
         emit('lobby_list', lobbies, broadcast=True)
     else:
-        emit('error', {'msg': 'Lobby already exists or invalid lobby id.'})
+        emit('error', {'msg': 'Invalid lobby id or lobby already exists.'})
         
-# Player joins a lobby.
 @socketio.on('join_lobby')
-def join_lobby(data):
+def handle_join_lobby(data):
+    """
+    Expected data: {
+      'lobby_id': the lobby the user wants to join,
+      'username': the user’s name,
+      'coins': the number of coins the user has
+    }
+    """
     lobby_id = data.get('lobby_id')
     username = data.get('username')
-    if lobby_id in lobbies:
-        lobbies[lobby_id]['players'].append(username)
-        # Optionally, add the client to a SocketIO "room"
-        join_room(lobby_id)
-        # Broadcast update for that lobby (or send the whole lobby list)
-        emit('lobby_list', lobbies, broadcast=True)
-    else:
+    user_coins = data.get('coins', 0)
+    
+    if lobby_id not in lobbies:
         emit('error', {'msg': 'Lobby not found.'})
+        return
+
+    lobby = lobbies[lobby_id]
+    required = lobby.get('min_coins', 0)
+    
+    # Check coin requirement.
+    if user_coins < required:
+        emit('error', {'msg': 'Not enough coins to join this lobby.'})
+        return
+
+    # Add user to the lobby.
+    lobby['players'].append(username)
+    join_room(lobby_id)
+    
+    # Broadcast the updated lobby list to all clients.
+    emit('lobby_list', lobbies, broadcast=True)
