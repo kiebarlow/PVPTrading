@@ -1,8 +1,15 @@
 import React from 'react'
+import Header from '../components/Header'
+import GameBrowser from './GameBrowser'
 
 function Root() {
   return (
-    <div>Root</div>
+    <div>
+        <Header/>
+        <div>
+            <GameBrowser/>
+        </div>
+    </div>
   )
 }
 
