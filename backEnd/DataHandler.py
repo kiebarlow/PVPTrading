@@ -14,6 +14,8 @@ class BinanceDataHandler:
         self.latestKlines = {"BTCUSDT": {}, "ETHUSDT": {}, "SOLUSDT": {}}  # 10 min of 1s klines
         self.maxTrades = 100
         self.maxKlines = 600
+        self.mostRecentTimestamp = 0
+        self.numOfSymbolsRecieved = 0 
     
     async def connect(self):
         async with websockets.connect(self.binanceWsUrl) as ws:
@@ -71,8 +73,20 @@ class BinanceDataHandler:
             }
             self.latestKlines[symbol][klineInfo['time']] = klineInfo
             self.trimDict(self.latestKlines[symbol], self.maxKlines)
-            #self.printKline(symbol)
-            self.socketio.emit("newCandle", {"symbol": symbol, "klines": list(self.latestKlines[symbol].values())})
+            if klineInfo['time'] > self.mostRecentTimestamp:
+                self.mostRecentTimestamp = klineInfo['time']
+                self.numOfSymbolsRecieved = 1
+            elif klineInfo['time'] == self.mostRecentTimestamp:
+                self.numOfSymbolsRecieved += 1
+            if self.numOfSymbolsRecieved == 3:
+                self.numOfSymbolsRecieved = 0
+                print("3 symbols recieved")
+                self.socketio.emit("newCandle", {
+                    "BTCUSDT": list(self.latestKlines["BTCUSDT"].values())[-1],
+                    "ETHUSDT": list(self.latestKlines["ETHUSDT"].values())[-1],
+                    "SOLUSDT": list(self.latestKlines["SOLUSDT"].values())[-1]
+                })
+                
     
     def trimDict(self, dictionary, maxLength):
         while len(dictionary) > maxLength:
