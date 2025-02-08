@@ -11,6 +11,7 @@ import Root from './routes/Root';
 import ErrorPage from './routes/ErrorPage';
 import Bank from "./routes/Bank";
 import GameBrowser from "./routes/GameBrowser";
+import LeaderBoard from "./routes/LeaderBoard";
 
 const router = createBrowserRouter([
   {
@@ -25,6 +26,10 @@ const router = createBrowserRouter([
       {
         path: "browseGames",
         element: <GameBrowser />,
+      },
+      {
+        path: "leaderBoard",
+        element: <LeaderBoard />,
       },
     ],
   },
