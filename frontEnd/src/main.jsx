@@ -37,6 +37,10 @@ const router = createBrowserRouter([
         path: "playGame",
         element: <TradePage />,
       },
+      {
+        path: "loginRegister",
+        element: <LoginPage />,
+      },
     ],
   },
 ]);
