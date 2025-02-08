@@ -1,16 +1,11 @@
-import { useState } from 'react'
-import './App.css'
+import React, { useEffect, useState, useRef } from 'react';
 
 function App() {
-  const [count, setCount] = useState(0)
 
   return (
-    <>
-      <div>
-        Home page
-      </div>
-    </>
-  )
+  <div></div>
+  );
 }
 
-export default App
+
+export default App;

@@ -9,18 +9,14 @@ import LoginPage from './routes/LoginPage';
 
 import Root from './routes/Root';
 import ErrorPage from './routes/ErrorPage';
+import App from './App';
 
 const router = createBrowserRouter([
   {
     path: "/",
     element: <Root />,
-    errorElement: <ErrorPage />,
-    children: [
-      {
-        path: "loginPage",
-        element: <LoginPage />,
-      },
-    ],
+
+  
   },
 ]);
 
