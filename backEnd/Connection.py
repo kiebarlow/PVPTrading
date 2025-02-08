@@ -3,6 +3,8 @@ from Database.py import currentGames
 
 app = Flask(__name__)
 
+# API endpoint that sends all of the currently avaialable to join games.
+# Returns a list of JSON style elements.
 @app.route("/getCurrentGames")
 def getCurrentGames():
     curr = currentGames("Y")
@@ -17,4 +19,6 @@ def getCurrentGames():
     return currGames
 
 
+@app.route("/createNewGame")
+def createNewGame():
     

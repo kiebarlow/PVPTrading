@@ -19,6 +19,16 @@ def addGems(usrID,gems):
     cursor.execute("UPDATE User SET Gems = ? WHERE UserID = ?", (balance,usrID))
     conn.commit()
     conn.close()
+    
+def withdrawGems(usrID,withdrawal):
+    conn = sqlite3.connect('PVPTradingDatabase.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT Gems FROM User WHERE UserID = ?",(usrID))
+    balance = cursor.fetchall()
+    balance -= withdrawal
+    cursor.execute("UPDATE User SET Gems = ? WHERE UserID = ?", (balance,usrID))
+    conn.commit()
+    conn.close()
 
 # Creates a new crypto wallet information instance for a user.
 def createWallet(wallID,pubKey,privKey):
