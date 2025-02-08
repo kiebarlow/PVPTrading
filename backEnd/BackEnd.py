@@ -2,10 +2,14 @@ from flask import Flask, render_template, request
 from flask_socketio import SocketIO, emit, join_room, leave_room, close_room
 import time
 import threading
+import DataHandler
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'jrhbieygfhcbvhwruygv32rughf123ttrplace1beuygfreoubvwro'
 socketio = SocketIO(app,ping_timeout=5, ping_interval=15, logger=True, engineio_logger=True)
+
+# Initialize the data handler
+data_handler = DataHandler.BinanceDataHandler(socketio)
 
 lobbies = {}
 LOBBY_TIMER_DURATION = 60
@@ -187,7 +191,14 @@ def handle_trade_close(data):
     """
     lobby_id = data.get('lobby_id')
     user_id = data.get('user_id')
-    
+        
+@socketio.on('historicalData')
+def handle_historical_data(data):
+    ticker = str(data).upper()
+    timeframe = 10
+    # Get historical data for the specified ticker and timeframe.
+    historical_data = data_handler.get_cached_klines(ticker, timeframe)
+    emit('historicalData', historical_data)
         
 if __name__ == "__main__":
     socketio.run(app, debug=True)
