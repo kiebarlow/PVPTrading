@@ -2,7 +2,15 @@ import React from "react";
 import GameCard from "../components/gameBrowseromponents/gameCard";
 import PreviousGameCard from "../components/gameBrowseromponents/PreviousGameCard";
 import { FaRegGem } from "react-icons/fa6";
+
+import useStore from '../UseStore';
+
+
+
+
+
 function GameBrowser() {
+  const sendData = useStore((state) => state.sendData);
   return (
     <div className="min-h-screen bg-[#0D0D0D] text-white p-8">
       <div className="mb-6">
@@ -20,7 +28,9 @@ function GameBrowser() {
               placeholder="Enter price"
               className="bg-gray-800 text-white p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <button className="mt-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 rounded-lg transition">
+            <button className="mt-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 rounded-lg transition"
+            onClick={() => sendData("historicalDataRequest", "BTCUSDT" )}
+            >
               Create Game
             </button>
           </div>
