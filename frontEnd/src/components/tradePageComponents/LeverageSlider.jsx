@@ -79,7 +79,7 @@ function AirbnbThumbComponent(props) {
 
 export default function CustomizedSlider() {
     return (
-        <Box sx={{width: 350}}>
+        <Box sx={{width: '90%'}}>
             <AirbnbSlider
                 slots={{thumb: AirbnbThumbComponent}}
                 getAriaLabel={(index) => (index === 0 ? 'Minimum price' : 'Maximum price')}
