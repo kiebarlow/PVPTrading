@@ -74,12 +74,14 @@ def newTrade(gameID,usrID,amount,time,tradeType,coinTraded,sold,leverage):
     conn.commit()
     conn.close()
     
-# Get a list of all games that are currently joinable.
-def currentGames():
+# Get a list of all games that are currently joinable or past.
+# Takes string as input for function (Y/N)
+def currentGames(decider):
     conn = sqlite3.connect('PVPTradingDatabase.db')
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM Game WHERE Joinable = ?",("Y"))
+    cursor.execute("SELECT * FROM Game WHERE Joinable = ?",(decider))
     currGames = cursor.fetchall()
     conn.close()
     return currGames
+
     
