@@ -13,6 +13,7 @@ import Bank from "./routes/Bank";
 import GameBrowser from "./routes/GameBrowser";
 import LeaderBoard from "./routes/LeaderBoard";
 
+
 const router = createBrowserRouter([
   {
     path: "/",

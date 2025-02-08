@@ -2,7 +2,6 @@ import React from "react";
 import GameCard from "../components/gameBrowseromponents/gameCard";
 import PreviousGameCard from "../components/gameBrowseromponents/PreviousGameCard";
 import { FaRegGem } from "react-icons/fa6";
-
 function GameBrowser() {
   return (
     <div className="min-h-screen bg-[#0D0D0D] text-white p-8">
