@@ -5,15 +5,7 @@ import useStore from '../UseStore';
 import { useEffect } from 'react';
 function Root() {
 
-  const connect = useStore((state) => state.connect);
-  const sendData = useStore((state) => state.sendData);
 
-
-  useEffect(() => {
-    connect('http://127.0.0.1:5001');
-    sendData('historicalDataRequest');
-    
-  }, [connect]);
 
 
 
