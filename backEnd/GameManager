@@ -4,30 +4,31 @@ from typing import Dict, List
 class GameManager:
     def __init__(self, socketio):
         self.socketio = socketio
-        self.gameManagers = {}
+        self.games = {}
     
-    def createGameManager(self, gameId, userIds):
-        self.gameManagers[gameId] = Game(self.socketio, gameId, userIds)
+    def createGame(self, gameId: str, userIds: List[str]):
+        self.games[gameId] = Game(self.socketio, gameId, userIds)
     
-    def getGameManager(self, gameId):
-        return self.gameManagers[gameId]
+    def getGame(self, gameId):
+        return self.games[gameId]
     
-    def updatePnL(self):
-        for game in self.gameManagers.values():
+    def updatePnL(self, data):
+        for game in self.games.values():
             game.handleNewCandle(game)
             
     def openPosition(self, gameId, userId, symbol, margin, leverage):
         self.gameManagers[gameId].openPosition(userId, symbol, margin, leverage)
 class Game:
-    def __init__(self, socketio: SocketIO, gameId: str, userIds: List[int]):
+    def __init__(self, socketio: SocketIO, gameId: str, userIds: List[str]):
         self.socketio = socketio
         self.userBalances: Dict[str, float] = {}
         self.userPositions: Dict[str, Dict[str, List[dict]]] = {}  # userId -> symbol -> list of positions
         self.gameId = gameId
-        self.latestCandles: Dict[str, List[dict]] = {}
+        self.latestCandles: Dict[List[dict]] = {}
         for userId in userIds:
             self.userBalances[userId] = 10000
             self.userPositions[userId] = {}
+        self.userIds = userIds
 
     def openPosition(self, userId: str, symbol: str, margin: float, leverage: float):
         if userId not in self.userBalances:
@@ -70,38 +71,44 @@ class Game:
             priceDiff = -priceDiff
         return priceDiff * position["quantity"] * position["leverage"]
 
-    def handleNewCandle(self, symbol: str, candleData: dict):
-        self.latestCandles[symbol].append(candleData)
-        currentPrice = candleData["price"]
+    def handleNewCandle(self, candleData: dict):
+        self.latestCandles.append(candleData)
+        # pop the first element if the length of the list is greater than 10
+        if len(self.latestCandles) > 10:
+            self.latestCandles.pop(0)
+        
+        for symbol, candle in candleData.items():
+            currentPrice = candle["close"]  # Use closing price from klineInfo
 
-        for userId in list(self.userPositions.keys()):  # Create a copy of keys to avoid modification during iteration
-            if symbol in self.userPositions[userId]:
-                positions = self.userPositions[userId][symbol]
+            for userId in list(self.userPositions.keys()):  # Copy keys to avoid modification during iteration
+                if symbol not in self.userPositions[userId]:  
+                    continue  # Skip users who don't have positions in this symbol
                 
-                # Process each position and handle potential liquidations
+                positions = self.userPositions[userId][symbol]
                 remainingPositions = []
                 totalPnL = 0
-                
+
                 for position in positions:
                     pnl = self.calculatePositionPnL(position, currentPrice)
                     totalPnL += pnl
-                    
-                    # Check if this individual position should be closed (opposite margin received)
+
+                    # Check if the position should be liquidated
                     if (position["type"] == "long" and pnl <= -position["margin"] * position["leverage"]) or \
-                       (position["type"] == "short" and pnl <= -position["margin"] * position["leverage"]):
-                        self.userBalances[userId] += position["margin"] + pnl
+                    (position["type"] == "short" and pnl <= -position["margin"] * position["leverage"]):
+                        self.userBalances[userId] = self.userBalances.get(userId, 0) + position["margin"] + pnl
                     else:
                         remainingPositions.append(position)
 
+                # Update user positions
                 if remainingPositions:
                     self.userPositions[userId][symbol] = remainingPositions
                 else:
                     del self.userPositions[userId][symbol]
-                    if not self.userPositions[userId]:  # No positions left for this user
+                    if not self.userPositions[userId]:  # Remove user if no positions remain
                         del self.userPositions[userId]
 
                 # Handle account liquidation
-                if self.userBalances[userId] <= 0:
+                if self.userBalances.get(userId, 0) <= 0:
                     self.handleLiquidation(userId)
                 else:
                     self.emitPortfolioUpdate(userId)

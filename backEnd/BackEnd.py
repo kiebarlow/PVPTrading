@@ -4,6 +4,8 @@ import time
 import threading
 import DataHandler, Database, solanaStuff
 import asyncio
+import GameManager
+
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'jrhbieygfhcbvhwruygv32rughf123ttrplace1beuygfreoubvwro'
@@ -14,6 +16,7 @@ dataHandler = DataHandler.BinanceDataHandler(socketio)
 async def start_data_handler():
     await dataHandler.connect()
 
+gameManager = GameManager.GameManager(socketio)
 
 lobbies = {}
 LOBBY_TIMER_DURATION = 60
@@ -155,11 +158,45 @@ def handleDisconnect():
             emit('lobbyList', lobbies, broadcast=True)
             break      
         
+@socketio.on('openPosition')
+def handleOpenPosition(data):
+    """
+    Expected data: {
+        'gameId': the game the user is playing,
+        'userId': the user's name,
+        'symbol': the symbol the user is trading,
+        'leverage': the leverage used,
+        'margin': the margin used
+    }
+    """
+    gameId = data.get('gameId')
+    userId = data.get('userId')
+    symbol = data.get('symbol')
+    leverage = data.get('leverage')
+    margin = data.get('margin')
+    
+    # Check if the game exists.
+    if gameId not in GameManager.games:
+        emit('error', {'msg': 'Game not found.'})
+        return
+    
+    game = gameManager.getGame(gameId)
+    
+    # Check if the user is in the game.
+    if userId not in game.userIds:
+        emit('error', {'msg': 'User not found in game.'})
+        return
+    
+    gameManager.openPosition(gameId, userId, symbol, margin, leverage)
+
+@socketio.on('newCandle')
+def handleNewCandle(data):
+    gameManager.updatePnL(data)    
+        
 @socketio.on('historicalDataRequest')
 def handleHistoricalData(data):
     print("request for historical data received")
     ticker = str(data).upper()
-    timeframe = 10
     # Get historical data for the specified ticker and timeframe.
     historicalData = dataHandler.getCachedKlines(ticker)
     emit('historicalData', historicalData)
