@@ -7,12 +7,15 @@ def connect():
     return conn
 
 # Creates a new user in the database.
-def createUser(usrID, usrNm, wallID):
+def createUser(usrNm, passwd):
     conn = sqlite3.connect('PVPTradingDatabase.db')
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO User VALUES (?,?,?,?)", (usrID,usrNm,wallID,0))
+    usrID = uuid.uuid4()
+    wallID = uuid.uuid4()
+    cursor.execute("INSERT INTO User VALUES (?,?,?,?,?)", (usrID,usrNm,wallID,0,passwd))
     conn.commit()
     conn.close()
+    return wallID
     
 # Updates the gems balance for a user's account. 
 def addGems(usrID,gems):
@@ -107,5 +110,13 @@ def currentGames(decider):
     currGames = cursor.fetchall()
     conn.close()
     return currGames
+
+def checkUser(usrName, passwd):
+    conn = connect()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM User WHERE UserName = ? AND Password = ?",(usrName,passwd))
+    user = cursor.fetchall()
+    conn.close()
+    return user
 
     
