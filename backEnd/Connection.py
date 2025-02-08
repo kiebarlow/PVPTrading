@@ -17,8 +17,3 @@ def getCurrentGames():
             "jackpot":game[3]
         })
     return currGames
-
-
-@app.route("/createNewGame")
-def createNewGame():
-    
