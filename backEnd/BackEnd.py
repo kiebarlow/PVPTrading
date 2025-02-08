@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request
-from flask_socketio import SocketIO, emit, join_room, leave_room
+from flask_socketio import SocketIO, emit, join_room, leave_room, close_room
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'jrhbieygfhcbvhwruygv32rughf123ttrplace1beuygfreoubvwro'
@@ -70,3 +70,39 @@ def handle_join_lobby(data):
     
     # Broadcast the updated lobby list to all clients.
     emit('lobby_list', lobbies, broadcast=True)
+    
+@socketio.on('leave_lobby')
+def handle_leave_lobby(data):
+    """
+    Expected data: {
+      'lobby_id': the lobby the user wants to leave,
+      'username': the user’s name
+    }
+    """
+    lobby_id = data.get('lobby_id')
+    username = data.get('username')
+    
+    if lobby_id not in lobbies:
+        emit('error', {'msg': 'Lobby not found.'})
+        return
+
+    lobby = lobbies[lobby_id]
+    if username in lobby['players']:
+        lobby['players'].remove(username)
+        leave_room(lobby_id)
+        if not lobby['players']:
+            del lobbies[lobby_id]
+            close_room(lobby_id)
+        
+        # Broadcast the updated lobby list to all clients.
+        emit('lobby_list', lobbies, broadcast=True)
+    else:
+        emit('error', {'msg': 'User not found in lobby.'})
+        
+
+        
+        
+        
+        
+if __name__ == "__main__":
+    socketio.run(app, debug=True)
