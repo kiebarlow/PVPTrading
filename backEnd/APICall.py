@@ -16,8 +16,6 @@ def DepositGems(usrName):
     """Now add a retrieve number of gems.
     """
     
-    
-
 def WithdrawSol(usrName, solAdress, numOfGems):
     numGems = checkNumOfGems(usrName)
     if numGems<numOfGems:
@@ -30,3 +28,27 @@ def WithdrawSol(usrName, solAdress, numOfGems):
     """Return true or false
     """
     
+    
+def siteLogin(usrName, passwd):
+    user = checkUser(usrName,passwd)
+    if user != 0:
+        return True
+    else:
+        return False
+    """Return true if the user login is successful.
+    """
+    
+def siteRegister(usrName, passwd):
+    available =  checkUser(usrName,passwd)
+    if available == 0:
+        wallID = createUser(usrName,passwd)
+        user = SolanaStuff()
+        user.createUserWallet()
+        pub = user.publicKey
+        priv = user.privateKey
+        createWallet(wallID,pub,priv)
+        return True
+    else:
+        return False
+    """Return true if the creation of a user is successful.
+    """
