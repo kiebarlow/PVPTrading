@@ -1,23 +1,5 @@
-import DataHandler, Database
-import time
-
-# class GameManager:
-#     def __init__(self, socketio):
-#         self.socketio = socketio
-#         self.dataHandler = DataHandler.BinanceDataHandler(socketio)
-#         self.dataHandler.start()
-    
-#     def openTrade(self, lobbyId, userId, ticker, quantity, leverage, action):
-#         timestamp = time.time()
-#         self.socketio.emit('trade_open', {
-#             'lobby_id': lobbyId,
-#             'user_id': userId,
-#             'ticker': ticker,
-#             'quantity': quantity,
-#             'leverage': leverage,
-#             'action': action,
-#             'timestamp': timestamp
-#         }, room=lobbyId)
+from flask_socketio import SocketIO
+from typing import Dict, List
 
 class GameManager:
     def __init__(self, socketio):
@@ -31,105 +13,130 @@ class GameManager:
         return self.gameManagers[gameId]
     
     def updatePnL(self):
-        for gameId in self.gameManagers:
-            for symbol in self.gameManagers[gameId].latestTrades:
-                self.gameManagers[gameId].updatePnL(symbol)
-
+        for game in self.gameManagers.values():
+            game.handleNewCandle(game)
+            
+    def openPosition(self, gameId, userId, symbol, margin, leverage):
+        self.gameManagers[gameId].openPosition(userId, symbol, margin, leverage)
 class Game:
-    def __init__(self, socketio, gameId):
+    def __init__(self, socketio: SocketIO, gameId: str, userIds: List[int]):
         self.socketio = socketio
-        self.userBalances = {}
-        self.userPositions = {}
+        self.userBalances: Dict[str, float] = {}
+        self.userPositions: Dict[str, Dict[str, List[dict]]] = {}  # userId -> symbol -> list of positions
         self.gameId = gameId
-    
-    def openPosition(self, userId, symbol, positionType, margin, leverage):
-        tradePrice = self.latestTrades[symbol][-1]["price"]
-        quantity = (margin * leverage) / tradePrice
+        self.latestCandles: Dict[str, List[dict]] = {}
+        for userId in userIds:
+            self.userBalances[userId] = 10000
+            self.userPositions[userId] = {}
+
+    def openPosition(self, userId: str, symbol: str, margin: float, leverage: float):
         if userId not in self.userBalances:
-            self.userBalances[userId] = 10000  # Default balance
-        if self.userBalances[userId] >= margin:
-            self.userBalances[userId] -= margin
-            self.userPositions[userId] = {
+            self.userBalances[userId] = 10000
+
+        if userId not in self.userPositions:
+            self.userPositions[userId] = {}
+
+        if symbol not in self.userPositions[userId]:
+            self.userPositions[userId][symbol] = []
+
+        tradePrice = self.latestCandles[symbol][-1]["price"]
+        quantity = abs(margin * leverage) / tradePrice
+        positionType = "long" if margin > 0 else "short"
+
+        if self.userBalances[userId] >= abs(margin):
+            self.userBalances[userId] -= abs(margin)
+            
+            newPosition = {
                 "symbol": symbol,
                 "type": positionType,
                 "quantity": quantity,
                 "entryPrice": tradePrice,
                 "leverage": leverage,
-                "margin": margin
+                "margin": abs(margin)
             }
+            
+            self.userPositions[userId][symbol].append(newPosition)
+            self.emitPortfolioUpdate(userId)
         else:
-            print("Insufficient balance for trade")
+            self.socketio.emit("error", {
+                "userId": userId,
+                "gameId": self.gameId,
+                "message": "Insufficient balance"
+            }, room=self.gameId)
 
-    def closePosition(self, userId, symbol):
+    def calculatePositionPnL(self, position: dict, currentPrice: float) -> float:
+        priceDiff = currentPrice - position["entryPrice"]
+        if position["type"] == "short":
+            priceDiff = -priceDiff
+        return priceDiff * position["quantity"] * position["leverage"]
+
+    def handleNewCandle(self, symbol: str, candleData: dict):
+        self.latestCandles[symbol].append(candleData)
+        currentPrice = candleData["price"]
+
+        for userId in list(self.userPositions.keys()):  # Create a copy of keys to avoid modification during iteration
+            if symbol in self.userPositions[userId]:
+                positions = self.userPositions[userId][symbol]
+                
+                # Process each position and handle potential liquidations
+                remainingPositions = []
+                totalPnL = 0
+                
+                for position in positions:
+                    pnl = self.calculatePositionPnL(position, currentPrice)
+                    totalPnL += pnl
+                    
+                    # Check if this individual position should be closed (opposite margin received)
+                    if (position["type"] == "long" and pnl <= -position["margin"] * position["leverage"]) or \
+                       (position["type"] == "short" and pnl <= -position["margin"] * position["leverage"]):
+                        self.userBalances[userId] += position["margin"] + pnl
+                    else:
+                        remainingPositions.append(position)
+
+                if remainingPositions:
+                    self.userPositions[userId][symbol] = remainingPositions
+                else:
+                    del self.userPositions[userId][symbol]
+                    if not self.userPositions[userId]:  # No positions left for this user
+                        del self.userPositions[userId]
+
+                # Handle account liquidation
+                if self.userBalances[userId] <= 0:
+                    self.handleLiquidation(userId)
+                else:
+                    self.emitPortfolioUpdate(userId)
+
+    def handleLiquidation(self, userId: str):
+        del self.userBalances[userId]
         if userId in self.userPositions:
-            if self.userPositions[userId]["symbol"] == symbol:
-                position = self.userPositions[userId]
-                currentPrice = self.latestTrades[symbol][-1]["price"]
-                pnl = (currentPrice - position["entryPrice"]) * position["quantity"] * position["leverage"]
-                if position["type"] == "short":
-                    pnl = -pnl
-                self.userBalances[userId] += position["margin"] + pnl
-                del self.userPositions[userId]
-                if self.userBalances[userId] < 0:
-                    print("User has been liquidated")
-                    del self.userBalances[userId]
-                else:
-                    self.socketio.emit("pnlUpdate", {"userId": userId, "balance": self.userBalances[userId], "pnl": pnl})
-            else:
-                print("User does not have a position in this symbol")
+            del self.userPositions[userId]
+            
+        self.socketio.emit("liquidation", {
+            "userId": userId,
+            "gameId": self.gameId
+        }, room=self.gameId)
 
-    def updatePnL(self, symbol):
-        for userId, position in self.userPositions.items():
-            if position["symbol"] == symbol:
-                currentPrice = self.latestTrades[symbol][-1]["price"]
-                pnl = (currentPrice - position["entryPrice"]) * position["quantity"] * position["leverage"]
-                if position["type"] == "short":
-                    pnl = -pnl
-                totalBalance = self.userBalances[userId] + pnl
-                if totalBalance < 0:
-                    print("User has been liquidated")
-                    del self.userBalances[userId]
-                    del self.userPositions[userId]
-                else:
-                    self.userBalances[userId] = totalBalance
-                self.socketio.emit("pnlUpdate", {"userId": userId, "balance": totalBalance, "pnl": pnl})
-    
-# # Handle trade requests  
-# @socketio.on('tradeOpen')
-# def handleTradeOpen(data):
-#     """
-#     Expected data: {
-#       'lobby_id': the lobby the trade is happening in,
-#       'user_id': the user initiating the trade,
-#       'ticker': the stock ticker being traded,
-#       'quantity': the number of shares being traded,
-#       'leverage': the leverage being used (e.g., 1.5x),
-#       'action': the action being taken (e.g., 'buy' or 'sell')
-#     }
-#     """
-#     lobbyId = data.get('lobby_id')
-#     userId = data.get('user_id')
-#     ticker = data.get('ticker')
-#     quantity = data.get('quantity')
-#     leverage = data.get('leverage', 1)
-#     action = data.get('action')
-#     timestamp = time.time()
-#     # check closest timestamp of binance data
-    
-#     emit('trade_open', data, room=lobbyId)
+    def calculateTotalPortfolioValue(self, userId: str) -> float:
+        if userId not in self.userBalances:
+            return 0
+
+        totalValue = self.userBalances[userId]
         
-# @socketio.on('trade_close')
-# def handleTradeClose(data):
-#     """
-#     Expected data: {
-#       'lobby_id': the lobby the trade is happening in,
-#       'user_id': the user initiating the trade,
-#       'ticker': the stock ticker being traded,
-#       'quantity': the number of shares being traded,
-#       'leverage': the leverage being used (e.g., 1.5x),
-#       'action': the action being taken (e.g., 'buy' or 'sell')
-#     }
-#     """
-#     lobbyId = data.get('lobby_id')
-#     userId = data.get('user_id')
-    
+        if userId in self.userPositions:
+            for symbol in self.userPositions[userId]:
+                currentPrice = self.latestCandles[symbol][-1]["price"]
+                for position in self.userPositions[userId][symbol]:
+                    totalValue += self.calculatePositionPnL(position, currentPrice)
+
+        return totalValue
+
+    def emitPortfolioUpdate(self, userId: str):
+        totalValue = self.calculateTotalPortfolioValue(userId)
+        
+        self.socketio.emit("portfolioUpdate", {
+            "userId": userId,
+            "gameId": self.gameId,
+            "balance": self.userBalances[userId],
+            "totalPortfolioValue": totalValue,
+            "positions": self.userPositions.get(userId, {})
+        }, room=self.gameId)
