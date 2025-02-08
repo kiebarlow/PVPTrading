@@ -27,10 +27,7 @@ export const useStore = create((set, get) => ({
         return response.json();
       },
 
-    
-
-    
-
+  
     checkForDeposit: async (userId) => {
       const response = await fetch(`${apiUrl}/checkForDeposit`, {
         method: 'GET',
