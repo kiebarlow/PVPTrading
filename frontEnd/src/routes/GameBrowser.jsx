@@ -12,15 +12,25 @@ function GameBrowser() {
       <div className="mb-10">
         <h1 className="text-6xl font-semibold mb-4 CPMono">Live Games</h1>
         <div className="flex flex-wrap gap-5">
+
+        <div className="flex flex-row overflow-x-auto space-x-4 w-full">
           <div className="bg-[#0D0D0D] border border-[#1E1E1E] rounded-xl shadow-md p-4 w-64 text-white text-sm flex flex-col gap-2">
-            <div className="text-lg font-semibold">Entry Price:</div>
-            <button className="mt-2 bg-blue-600 hover:bg-green-700 text-white font-medium py-1.5 rounded-lg transition">
+            <input
+              type="number"
+              placeholder="Enter price"
+              className="bg-gray-800 text-white p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button className="mt-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 rounded-lg transition">
               Create Game
             </button>
           </div>
-          <GameCard entryFee={10} numPlayers={2} timeToStart={10} />
-          <GameCard entryFee={20} numPlayers={4} timeToStart={5} />
-          <GameCard entryFee={15} numPlayers={3} timeToStart={8} />
+          
+            <GameCard entryFee={10} numPlayers={2} timeToStart={10} />
+            <GameCard entryFee={20} numPlayers={4} timeToStart={5} />
+            <GameCard entryFee={15} numPlayers={3} timeToStart={8} />
+           
+          </div>
+
         </div>
       </div>
 

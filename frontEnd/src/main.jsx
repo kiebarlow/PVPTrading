@@ -21,6 +21,7 @@ const router = createBrowserRouter([
     element: <Root />,
     errorElement: <ErrorPage />,
     children: [
+      { index:true, element: <LoginPage/>},
       {
         path: "bank",
         element: <Bank />,
@@ -36,6 +37,10 @@ const router = createBrowserRouter([
       {
         path: "playGame",
         element: <TradePage />,
+      },
+      {
+        path: "loginRegister",
+        element: <LoginPage />,
       },
     ],
   },
