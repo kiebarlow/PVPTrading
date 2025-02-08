@@ -52,7 +52,7 @@ class BinanceDataHandler:
                 "quantity": float(data['q']),
                 "timestamp": int(data['T'])
             }
-            self.latestTrades[symbol][tradeInfo['time']] = tradeInfo
+            self.latestTrades[symbol][tradeInfo['timestamp']] = tradeInfo
             self.trimDict(self.latestTrades[symbol], self.maxTrades)
             print(symbol, " trade")
             # Check price change
@@ -60,10 +60,10 @@ class BinanceDataHandler:
                 timestamps = sorted(self.latestTrades[symbol].keys())
                 if self.latestTrades[symbol][timestamps[-2]]['price'] != self.latestTrades[symbol][timestamps[-1]]['price']:
                     self.socketio.emit("tradeUpdate", self.latestTrades[symbol])
-                    self.printTrade(symbol)
+                    #self.printTrade(symbol)
         elif '@kline' in stream:
             klineInfo = {
-                "time": int(data['k']['t']),
+                "time": int(data['k']['t']) / 1000,
                 "open": float(data['k']['o']),
                 "close": float(data['k']['c']),
                 "high": float(data['k']['h']),
@@ -71,7 +71,7 @@ class BinanceDataHandler:
             }
             self.latestKlines[symbol][klineInfo['time']] = klineInfo
             self.trimDict(self.latestKlines[symbol], self.maxKlines)
-            self.printKline(symbol)
+            #self.printKline(symbol)
             self.socketio.emit("newCandle", {"symbol": symbol, "klines": list(self.latestKlines[symbol].values())})
     
     def trimDict(self, dictionary, maxLength):
@@ -85,7 +85,7 @@ class BinanceDataHandler:
     
     def printKline(self, symbol):
         kline = list(self.latestKlines[symbol].values())[-1]
-        print(f"{symbol} Kline - Open: ${kline['open']}, High: ${kline['high']}, Low: ${kline['low']}, Close: ${kline['close']}, Volume: {kline['volume']}, Trades: {kline['trades']}")
+        print(f"{symbol} Kline - Open: ${kline['open']}, High: ${kline['high']}, Low: ${kline['low']}, Close: ${kline['close']}")
     
     def getLatestTrade(self, symbol):
         return list(self.latestTrades[symbol].values())[-1] if self.latestTrades[symbol] else None
