@@ -38,6 +38,25 @@ def createGame(start,end,jackpot):
     conn.close()
     return gameID
 
+# Update the jackpot total.
+def updateJackpot(gameID,input):
+    conn = sqlite3.connect('PVPTradingDatabase.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT Jackpot FROM Game WHERE GameID = ?",(gameID))
+    jackpot = cursor.fetchall()
+    jackpot += input
+    cursor.execute("UPDATE User SET Jackpot = ? WHERE GameID = ?", (jackpot,gameID))
+    conn.commit()
+    conn.close()
+   
+# Close the game after it starts. 
+def closeGame(gameID):
+    conn = sqlite3.connect('PVPTradingDatabase.db')
+    cursor = conn.cursor()
+    cursor.execute("UPDATE Game SET Joinable = ? WHERE GameID = ?", (gameID))
+    conn.commit()
+    conn.close()
+
 # Creates a new instance of joining a game.
 def joinGame(gameID,usrID):
     conn = sqlite3.connect('PVPTradingDatabase.db')
