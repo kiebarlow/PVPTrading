@@ -11,22 +11,45 @@ export const useStore = create((set, get) => ({
   socketData: [],
   tickerData: [],
 
+  ethData: [],
+  solData: [],
+  btcDat: [],
+
+
+
   setTickerData: (data) => set({ tickerData: data }),
 
   // Initialize the socket connection
   connect: (url) => {
     const socket = io(url);
-
+  
     socket.on("connect", () => {
       console.log("Connected to socket.io server");
       set({ socket });
     });
-
+  
     socket.on("historicalData", (message) => {
-      console.log("Received historical data, updating tickerData...");
-      set({ tickerData: message });
+      console.log("Received historical data, updating solData...");
+      set({ solData: message });
     });
-
+  
+    socket.on("newCandle", (message) => {
+      console.log("CANDLE HERE: " + JSON.stringify(message));
+  
+      // Append new candle data to the appropriate arrays
+      set((state) => ({
+        ethData: [...state.ethData, ...message["ETHUSDT"]], // Append ETH data
+      }));
+  
+      set((state) => ({
+        btcData: [...state.btcData, ...message["BTCUSDT"]], // Append BTC data
+      }));
+  
+      set((state) => ({
+        solData: [...state.solData, ...message["SOLUSDT"]], // Append SOL data
+      }));
+    });
+  
     set({ socket });
   },
 

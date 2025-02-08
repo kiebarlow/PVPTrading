@@ -9,32 +9,34 @@ function TradePage() {
   const currentHoldings = 500;
   const [waitingForGame, setWaitingForGame] = useState(false);
 
-  const setTickerData = useStore((state) => state.setTickerData);
-  const tickerData = useStore((state) => state.tickerData);
+  // Accessing store states and actions
   const sendData = useStore((state) => state.sendData);
+  const solData = useStore((state) => state.solData);
 
   useEffect(() => {
-    // Trigger WebSocket request for historical data when page loads
+    // Trigger WebSocket request for historical data when page loads (only once)
     const generateInitialData = async () => {
-      sendData("historicalDataRequest", "BTCUSDT");
+      sendData("historicalDataRequest", "SOLUSDT");
     };
-
-    // Initialize data request
+  
+    // Call generateInitialData only once
     generateInitialData();
-
-    // Update chart data when tickerData changes
-    if (tickerData.length > 0) {
-      setChartData(tickerData);
+  
+  }, []); // Empty dependency array ensures this runs only once when the component mounts
+  
+  useEffect(() => {
+    // Update chart data whenever solData changes
+    if (solData.length > 0) {
+      setChartData(solData); // Use the updated solData for chart
     } else {
-      // Fallback data if no tickerData is available
+      // If no solData, use fallback data
       const fallbackData = generateFallbackData();
       setChartData(fallbackData);
     }
-  }, [tickerData, sendData]);
+  }, [solData]); // Dependency on solData for re-renders
 
   // Generate fallback data if no data is set
   const generateFallbackData = () => {
-    console.log("NOOOOOOOO");
     let startTime = Math.floor(Date.now() / 1000) - 3600; // Start 1 hour ago
     let price = 35000;
 
@@ -55,7 +57,7 @@ function TradePage() {
     <div className="h-screen bg-[#0D0D0D] text-white flex flex-col p-6">
       <WaitForGameStart isOpen={waitingForGame} />
       <header className="p-4 border-b border-gray-800">
-        <h1 className="text-4xl font-bold">BTC/USDT</h1>
+        <h1 className="text-4xl font-bold">SOL/USDT</h1>
       </header>
       <main className="flex-grow flex overflow-hidden">
         {/* Trading View Container */}
