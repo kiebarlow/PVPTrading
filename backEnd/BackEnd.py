@@ -1,12 +1,16 @@
 from flask import Flask, render_template, request
 from flask_socketio import SocketIO, emit, join_room, leave_room, close_room
+from Database import *
+from solanaStuff import *
+from flask_cors import CORS
 import time
 import threading
 import DataHandler
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'jrhbieygfhcbvhwruygv32rughf123ttrplace1beuygfreoubvwro'
-socketio = SocketIO(app,ping_timeout=5, ping_interval=15, logger=True, engineio_logger=True)
+socketio = SocketIO(app,ping_timeout=5, ping_interval=15, logger=True, engineio_logger=True, cors_allowed_origins="http://localhost:5173")
+CORS(app, resources={r"/*": {"origins": "http://localhost:5173"}})
 
 # Initialize the data handler
 data_handler = DataHandler.BinanceDataHandler(socketio)
@@ -199,6 +203,71 @@ def handle_historical_data(data):
     # Get historical data for the specified ticker and timeframe.
     historical_data = data_handler.get_cached_klines(ticker, timeframe)
     emit('historicalData', historical_data)
+       
+from flask import request, jsonify
+
+@app.route("/registerUser", methods=['POST'])
+def siteRegister():
+    data = request.json  # Get JSON data from request
+    usrName = data.get('userName')
+    passwd = data.get('password')
+
+    if not usrName or not passwd:
+        return jsonify({"success": False, "message": "Missing username or password"}), 400
+
+    available = checkUser(usrName, passwd)
+
+    if available == []:
+        wallID = createUser(usrName, passwd)
+        user = SolanaStuff()
+        user.createUserWallet()
+        pub = user.publicKey
+        priv = user.privateKey
+        createWallet(wallID, pub, priv)
         
+        return jsonify({"success": True, "message": "User registered successfully"}), 200
+    else:
+        return jsonify({"success": False, "message": "Username already exists"}), 400      
+
+
+
+@app.route("/loginUser", methods=['POST'])
+def siteLogin():
+    data = request.get_json()  # Parse JSON request body
+    usrName = data.get('userName')
+    passwd = data.get('password')
+
+    if not usrName or not passwd:
+        return jsonify({"success": False, "message": "Username and password are required"}), 400
+
+    user = checkUser(usrName, passwd)  # Assuming this function checks credentials
+
+    if user != []:
+        return jsonify({"success": True, "message": "Login successful"}), 200
+    else:
+        return jsonify({"success": False, "message": "Invalid credentials"}), 401
+    
+    
+app.route("/checkForDeposit",methods=['POST'])
+def DepositGems():
+    data = request.get_json()
+    usrID = data.get('userId')# Might have to rewrite this to username.
+    conn = connect()
+    cursor = conn.cursor()
+    cursor.execute("SELECT WalletID FROM User WHERE UserID = ?", (usrID))
+    wallID = cursor.fetchall()
+    cursor.execute("SELECT * FROM Wallet WHERE WalletID = ?",(wallID))
+    wallInfo = cursor.fetchall()
+    depo = SolanaStuff.checkForDeposit(wallInfo[1], wallInfo[2])
+    if depo != 0:
+        addGems(usrID,depo)
+        conn.close()
+        numGems = checkNumOfGems(usrID)
+        return jsonify({"success": True, "message": "Deposit successful"}), 200
+    return jsonify({"success": False, "message": "No deposit made"}), 401
+ 
 if __name__ == "__main__":
     socketio.run(app, debug=True)
+    
+    
+    

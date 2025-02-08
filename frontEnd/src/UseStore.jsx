@@ -3,7 +3,7 @@ const apiUrl = 'http://127.0.0.1:5000';
 import { sha256 } from "crypto-hash";
 
 export const useStore = create((set, get) => ({
-    userId: null,  // Added userId state
+    userName: null,  // Added userId state
     userDepositAddress: null,
     userGemBalance: 0,
 
@@ -30,7 +30,7 @@ export const useStore = create((set, get) => ({
   
     checkForDeposit: async (userId) => {
       const response = await fetch(`${apiUrl}/checkForDeposit`, {
-        method: 'GET',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json'},
         mode: 'no-cors',
         body: JSON.stringify({ userId })

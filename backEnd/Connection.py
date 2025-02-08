@@ -1,5 +1,5 @@
 from flask import Flask
-from Database.py import currentGames
+from Database import currentGames
 
 app = Flask(__name__)
 
