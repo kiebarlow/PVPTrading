@@ -77,7 +77,14 @@ function AirbnbThumbComponent(props) {
     );
 }
 
-export default function CustomizedSlider() {
+export default function CustomizedSlider({onChange}) {
+    const [sliderValue, setSliderValue] = useState(100);
+
+    const handleChange = (event, newValue) => {
+        setSliderValue(newValue);
+        onChange(newValue)
+    };
+
     return (
         <Box sx={{width: '90%'}}>
             <AirbnbSlider
@@ -88,7 +95,9 @@ export default function CustomizedSlider() {
                 marks={marks}
                 min={100}
                 max={1000}
+                onChange={handleChange} // Attach onChange event
             />
         </Box>
     );
 }
+
