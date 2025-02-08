@@ -86,7 +86,7 @@ class BinanceDataHandler:
                     "BTCUSDT": list(self.latestKlines["BTCUSDT"].values())[-1],
                     "ETHUSDT": list(self.latestKlines["ETHUSDT"].values())[-1],
                     "SOLUSDT": list(self.latestKlines["SOLUSDT"].values())[-1]
-                })
+                }, include_self=True)
                 
     
     def trimDict(self, dictionary, maxLength):

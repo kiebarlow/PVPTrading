@@ -1,0 +1,135 @@
+import DataHandler, Database
+import time
+
+# class GameManager:
+#     def __init__(self, socketio):
+#         self.socketio = socketio
+#         self.dataHandler = DataHandler.BinanceDataHandler(socketio)
+#         self.dataHandler.start()
+    
+#     def openTrade(self, lobbyId, userId, ticker, quantity, leverage, action):
+#         timestamp = time.time()
+#         self.socketio.emit('trade_open', {
+#             'lobby_id': lobbyId,
+#             'user_id': userId,
+#             'ticker': ticker,
+#             'quantity': quantity,
+#             'leverage': leverage,
+#             'action': action,
+#             'timestamp': timestamp
+#         }, room=lobbyId)
+
+class GameManager:
+    def __init__(self, socketio):
+        self.socketio = socketio
+        self.gameManagers = {}
+    
+    def createGameManager(self, gameId, userIds):
+        self.gameManagers[gameId] = Game(self.socketio, gameId, userIds)
+    
+    def getGameManager(self, gameId):
+        return self.gameManagers[gameId]
+    
+    def updatePnL(self):
+        for gameId in self.gameManagers:
+            for symbol in self.gameManagers[gameId].latestTrades:
+                self.gameManagers[gameId].updatePnL(symbol)
+
+class Game:
+    def __init__(self, socketio, gameId):
+        self.socketio = socketio
+        self.userBalances = {}
+        self.userPositions = {}
+        self.gameId = gameId
+    
+    def openPosition(self, userId, symbol, positionType, margin, leverage):
+        tradePrice = self.latestTrades[symbol][-1]["price"]
+        quantity = (margin * leverage) / tradePrice
+        if userId not in self.userBalances:
+            self.userBalances[userId] = 10000  # Default balance
+        if self.userBalances[userId] >= margin:
+            self.userBalances[userId] -= margin
+            self.userPositions[userId] = {
+                "symbol": symbol,
+                "type": positionType,
+                "quantity": quantity,
+                "entryPrice": tradePrice,
+                "leverage": leverage,
+                "margin": margin
+            }
+        else:
+            print("Insufficient balance for trade")
+
+    def closePosition(self, userId, symbol):
+        if userId in self.userPositions:
+            if self.userPositions[userId]["symbol"] == symbol:
+                position = self.userPositions[userId]
+                currentPrice = self.latestTrades[symbol][-1]["price"]
+                pnl = (currentPrice - position["entryPrice"]) * position["quantity"] * position["leverage"]
+                if position["type"] == "short":
+                    pnl = -pnl
+                self.userBalances[userId] += position["margin"] + pnl
+                del self.userPositions[userId]
+                if self.userBalances[userId] < 0:
+                    print("User has been liquidated")
+                    del self.userBalances[userId]
+                else:
+                    self.socketio.emit("pnlUpdate", {"userId": userId, "balance": self.userBalances[userId], "pnl": pnl})
+            else:
+                print("User does not have a position in this symbol")
+
+    def updatePnL(self, symbol):
+        for userId, position in self.userPositions.items():
+            if position["symbol"] == symbol:
+                currentPrice = self.latestTrades[symbol][-1]["price"]
+                pnl = (currentPrice - position["entryPrice"]) * position["quantity"] * position["leverage"]
+                if position["type"] == "short":
+                    pnl = -pnl
+                totalBalance = self.userBalances[userId] + pnl
+                if totalBalance < 0:
+                    print("User has been liquidated")
+                    del self.userBalances[userId]
+                    del self.userPositions[userId]
+                else:
+                    self.userBalances[userId] = totalBalance
+                self.socketio.emit("pnlUpdate", {"userId": userId, "balance": totalBalance, "pnl": pnl})
+    
+# # Handle trade requests  
+# @socketio.on('tradeOpen')
+# def handleTradeOpen(data):
+#     """
+#     Expected data: {
+#       'lobby_id': the lobby the trade is happening in,
+#       'user_id': the user initiating the trade,
+#       'ticker': the stock ticker being traded,
+#       'quantity': the number of shares being traded,
+#       'leverage': the leverage being used (e.g., 1.5x),
+#       'action': the action being taken (e.g., 'buy' or 'sell')
+#     }
+#     """
+#     lobbyId = data.get('lobby_id')
+#     userId = data.get('user_id')
+#     ticker = data.get('ticker')
+#     quantity = data.get('quantity')
+#     leverage = data.get('leverage', 1)
+#     action = data.get('action')
+#     timestamp = time.time()
+#     # check closest timestamp of binance data
+    
+#     emit('trade_open', data, room=lobbyId)
+        
+# @socketio.on('trade_close')
+# def handleTradeClose(data):
+#     """
+#     Expected data: {
+#       'lobby_id': the lobby the trade is happening in,
+#       'user_id': the user initiating the trade,
+#       'ticker': the stock ticker being traded,
+#       'quantity': the number of shares being traded,
+#       'leverage': the leverage being used (e.g., 1.5x),
+#       'action': the action being taken (e.g., 'buy' or 'sell')
+#     }
+#     """
+#     lobbyId = data.get('lobby_id')
+#     userId = data.get('user_id')
+    
