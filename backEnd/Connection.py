@@ -9,6 +9,7 @@ def getCurrentGames():
     currGames = []
     for game in curr:
         currGames.append({
+            "game ID":game[0],
             "start time":game[1],
             "end time":game[2],
             "jackpot":game[3]
