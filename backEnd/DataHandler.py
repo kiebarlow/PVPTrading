@@ -1,3 +1,4 @@
+from flask_socketio import SocketIO, emit, join_room, leave_room, close_room
 import asyncio
 import json
 import websockets
@@ -6,7 +7,8 @@ from datetime import datetime
 from collections import deque
 
 class BinanceDataHandler:
-    def __init__(self):
+    def __init__(self, socketio: SocketIO):
+        self.socketio = socketio
         self.BINANCE_WS_URL = "wss://stream.binance.com:443/stream?streams=btcusdt@trade/solusdt@trade/ethusdt@trade"
         self.latest_trades = {"BTCUSDT": deque(maxlen=100), "ETHUSDT": deque(maxlen=100), "SOLUSDT": deque(maxlen=100)}
         self.latest_klines = {"BTCUSDT": deque(maxlen=600), "ETHUSDT": deque(maxlen=600), "SOLUSDT": deque(maxlen=600)}  # 10 min of 1s klines
@@ -53,6 +55,7 @@ class BinanceDataHandler:
             #check price change
             if len(self.latest_trades[symbol]) > 1:
                 if self.latest_trades[symbol][-2]['price'] != self.latest_trades[symbol][-1]['price']:
+                    #self.socketio.emit("trade_update", self.latest_trades[symbol], broadcast=True)
                     self.print_trade(symbol)
         elif '@kline' in stream:
             kline_info = {
@@ -66,6 +69,7 @@ class BinanceDataHandler:
             }
             self.latest_klines[symbol].append(kline_info)
             self.print_kline(symbol)
+            self.socketio.emit("newCandle", {symbol, self.latest_klines[symbol]}, broadcast=True)
     
     def print_trade(self, symbol):
         trade = self.latest_trades[symbol][-1]
