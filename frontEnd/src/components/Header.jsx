@@ -1,3 +1,5 @@
+import { Outlet, Link, useOutletContext } from "react-router-dom";
+
 export default function Header() {
     return (
       <header className="bg-gradient-to-b from-black to-[#0a1f0b] p-4 shadow-md flex justify-between items-center">
@@ -8,9 +10,14 @@ export default function Header() {
         
         {/* Navigation */}
         <nav className="hidden md:flex space-x-6 text-gray-300 text-sm font-medium">
-          <span className="hover:text-white transition">Browse Games</span>
+
+          <Link to={`browseGames`}>
+                    Browse Games
+        </Link>
           <span className="hover:text-white transition">Leaderboard</span>
-          <span className="hover:text-white transition">Bank</span>
+          <Link to={`bank`}>
+                    Bank
+        </Link>
         </nav>
         
         {/* Connect Wallet Placeholder */}

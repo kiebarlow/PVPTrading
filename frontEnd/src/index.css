@@ -1,1 +1,31 @@
 @import "tailwindcss";
+
+/* Define custom fonts */
+@font-face {
+  font-family: 'CPMono';
+  src: url('./assets/fonts/cpmono.otf') format('opentype'); /* Regular */
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'CPMonoBOLD';
+  src: url('./assets/fonts/cpmono_bold.otf') format('opentype'); /* Bold */
+  font-weight: bold;
+  font-style: normal;
+}
+
+/* Define CSS variables (custom properties) in the :root selector */
+:root {
+  --font-cpMono: CPMono;
+  --font-CpMono-Bold: CPMonoBOLD;
+}
+
+/* Example usage of the CSS variables (optional - for demonstration) */
+body {
+  font-family: var(--font-cpMono); /* Use the CPMono font by default */
+}
+
+h1, h2, h3 {
+  font-family: var(--font-CpMono); /* Use the bold version for headings */
+}

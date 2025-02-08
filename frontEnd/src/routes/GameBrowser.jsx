@@ -9,7 +9,7 @@ function GameBrowser() {
       </div>
 
       <div className="mb-10">
-        <h1 className="text-6xl font-semibold mb-4">Live Games</h1>
+        <h1 className="text-6xl font-semibold mb-4 CPMono">Live Games</h1>
         <div className="flex flex-wrap gap-5">
           <div className="bg-[#0D0D0D] border border-[#1E1E1E] rounded-xl shadow-md p-4 w-64 text-white text-sm flex flex-col gap-2">
             <div className="text-lg font-semibold">Gem Entry Price: </div>
