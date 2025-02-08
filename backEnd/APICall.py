@@ -1,5 +1,7 @@
 from solanaStuff import SolanaStuff
 from Database import *
+from BackEnd import *
+
 
 def DepositGems(usrName):
     conn = connect()
@@ -26,29 +28,4 @@ def WithdrawSol(usrName, solAdress, numOfGems):
     else:
         return False
     """Return true or false
-    """
-    
-    
-def siteLogin(usrName, passwd):
-    user = checkUser(usrName,passwd)
-    if user != 0:
-        return True
-    else:
-        return False
-    """Return true if the user login is successful.
-    """
-    
-def siteRegister(usrName, passwd):
-    available =  checkUser(usrName,passwd)
-    if available == 0:
-        wallID = createUser(usrName,passwd)
-        user = SolanaStuff()
-        user.createUserWallet()
-        pub = user.publicKey
-        priv = user.privateKey
-        createWallet(wallID,pub,priv)
-        return True
-    else:
-        return False
-    """Return true if the creation of a user is successful.
     """

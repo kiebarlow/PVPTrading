@@ -58,7 +58,7 @@ function TradePage() {
         console.log("historical data received")
     })
     
-    socket.off("historicalData", historicalDataListener);
+
 
     socket.on('newCandle', (data) => {
         //add data processing

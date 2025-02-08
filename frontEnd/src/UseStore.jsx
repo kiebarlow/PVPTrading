@@ -4,6 +4,7 @@ import { sha256 } from "crypto-hash";
 
 export const useStore = create((set, get) => ({
     userId: null,  // Added userId state
+    userName: null,
     userDepositAddress: null,
     userGemBalance: 0,
 
@@ -14,23 +15,46 @@ export const useStore = create((set, get) => ({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ userName, password: hashedPassword }),
         });
-        return response.json();
+        data = response.json()
+        if (data.success) {
+          // Store the user data on successful registration
+          set({
+            userId: data.userId, // Assuming userId is returned from API
+            userName: data.userName, // Assuming userName is returned from API
+          });
+        } else {
+          // Handle registration failure (optional)
+          console.error('Registration failed:', data.message || 'Unknown error');
+        }
+        return data;
       },
     
-      login: async (userName, password) => {
+    login: async (userName, password) => {
         const hashedPassword = await sha256(password); // Hash password
         const response = await fetch(`${apiUrl}/loginUser`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ userName, password: hashedPassword }),
         });
-        return response.json();
+        data = response.json()
+        if (data.success) {
+          // Store the user data on successful registration
+          set({
+            userId: data.userId, // Assuming userId is returned from API
+            userName: data.userName, // Assuming userName is returned from API
+          });
+        } else {
+          // Handle registration failure (optional)
+          console.error('Registration failed:', data.message || 'Unknown error');
+        }
+        return data;
       },
+      
 
   
     checkForDeposit: async (userId) => {
       const response = await fetch(`${apiUrl}/checkForDeposit`, {
-        method: 'GET',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json'},
         mode: 'no-cors',
         body: JSON.stringify({ userId })

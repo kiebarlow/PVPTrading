@@ -10,8 +10,8 @@ def connect():
 def createUser(usrNm, passwd):
     conn = sqlite3.connect('PVPTradingDatabase.db')
     cursor = conn.cursor()
-    usrID = uuid.uuid4()
-    wallID = uuid.uuid4()
+    usrID = str(uuid.uuid4())
+    wallID = str(uuid.uuid4())
     cursor.execute("INSERT INTO User VALUES (?,?,?,?,?)", (usrID,usrNm,wallID,0,passwd))
     conn.commit()
     conn.close()
