@@ -56,12 +56,13 @@ class BinanceDataHandler:
             }
             self.latestTrades[symbol][tradeInfo['timestamp']] = tradeInfo
             self.trimDict(self.latestTrades[symbol], self.maxTrades)
-            print(symbol, " trade")
+            #print(symbol, " trade")
             # Check price change
             if len(self.latestTrades[symbol]) > 1:
                 timestamps = sorted(self.latestTrades[symbol].keys())
                 if self.latestTrades[symbol][timestamps[-2]]['price'] != self.latestTrades[symbol][timestamps[-1]]['price']:
-                    self.socketio.emit("tradeUpdate", self.latestTrades[symbol])
+                    pass
+                    #self.socketio.emit("tradeUpdate", self.latestTrades[symbol])
                     #self.printTrade(symbol)
         elif '@kline' in stream:
             klineInfo = {
@@ -78,8 +79,8 @@ class BinanceDataHandler:
                 self.numOfSymbolsRecieved = 1
             elif klineInfo['time'] == self.mostRecentTimestamp:
                 self.numOfSymbolsRecieved += 1
-            if self.numOfSymbolsRecieved == 3:
-                self.numOfSymbolsRecieved = 0
+            if self.numOfSymbolsRecieved >= 3:
+                self.numOfSymbolsRecieved -= 3
                 print("3 symbols recieved")
                 self.socketio.emit("newCandle", {
                     "BTCUSDT": list(self.latestKlines["BTCUSDT"].values())[-1],
