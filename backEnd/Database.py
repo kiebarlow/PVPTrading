@@ -53,7 +53,7 @@ def updateJackpot(gameID,input):
 def closeGame(gameID):
     conn = sqlite3.connect('PVPTradingDatabase.db')
     cursor = conn.cursor()
-    cursor.execute("UPDATE Game SET Joinable = ? WHERE GameID = ?", (gameID))
+    cursor.execute("UPDATE Game SET Joinable = ? WHERE GameID = ?", ("N",gameID))
     conn.commit()
     conn.close()
 
@@ -73,4 +73,13 @@ def newTrade(gameID,usrID,amount,time,tradeType,coinTraded,sold,leverage):
     cursor.execute("INSERT INTO Trade VALUES (?,?,?,?,?,?,?,?)",(gameID,usrID,amount,time,tradeType,coinTraded,sold,leverage))
     conn.commit()
     conn.close()
+    
+# Get a list of all games that are currently joinable.
+def currentGames():
+    conn = sqlite3.connect('PVPTradingDatabase.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM Game WHERE Joinable = ?",("Y"))
+    currGames = cursor.fetchall()
+    conn.close()
+    return currGames
     
