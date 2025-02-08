@@ -28,6 +28,24 @@ function TradePage() {
     socket.emit('long',{amount: amount, pair: pair, userID: userID}) // negative amount values = selling or shorting
   }
 
+  // Request historical data when tradePair changes
+  useEffect(() => {
+    console.log("Requesting historical data for:", tradePair);
+    socket.emit("historicalDataRequest", tradePair);
+
+    // Listen for historical data
+    const historicalDataListener = (data) => {
+      console.log("Historical data received:", data);
+      setChartData(data);
+    };
+
+    socket.on("historicalData", historicalDataListener);
+
+    return () => {
+      socket.off("historicalData", historicalDataListener); // Cleanup listener
+    };
+  }, [tradePair]); // ✅ Runs every time tradePair changes
+
   useEffect(() => {
 
     socket.emit('historicalDataRequest', tradePair)
@@ -39,6 +57,8 @@ function TradePage() {
         setChartData(data)
         console.log("historical data received")
     })
+    
+    socket.off("historicalData", historicalDataListener);
 
     socket.on('newCandle', (data) => {
         //add data processing
@@ -59,7 +79,7 @@ function TradePage() {
             });
     })
 
-  }, [tradePair]); // Empty dependency array to ensure this runs only once when the component mounts
+  }, []); // Empty dependency array to ensure this runs only once when the component mounts
 
    
 
