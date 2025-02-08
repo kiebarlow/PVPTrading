@@ -49,7 +49,11 @@ class BinanceDataHandler:
                 "timestamp": int(data['T'])
             }
             self.latest_trades[symbol].append(trade_info)
-            self.print_trade(symbol)
+            print(symbol," trade")
+            #check price change
+            if len(self.latest_trades[symbol]) > 1:
+                if self.latest_trades[symbol][-2]['price'] != self.latest_trades[symbol][-1]['price']:
+                    self.print_trade(symbol)
         elif '@kline' in stream:
             kline_info = {
                 "open": float(data['k']['o']),
