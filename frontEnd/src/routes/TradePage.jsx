@@ -11,6 +11,7 @@ function TradePage() {
   const [tradePair, setTradePair] = useState("SOLUSDT")
   const [tradeAmount, setTradeAmount] = useState() // amount in the text field may need a better name!
   const [leverageAmount, setLeverageAmount] = useState(100)
+  const [currentPortfolioValue, setCurrentPortfolioValue] = useState(1000)
   const userID = 12345
 
   const socket = io('http://localhost:5000',{
@@ -41,6 +42,7 @@ function TradePage() {
 
     socket.on("historicalData", historicalDataListener);
 
+
     return () => {
       socket.off("historicalData", historicalDataListener); // Cleanup listener
     };
@@ -58,7 +60,6 @@ function TradePage() {
         console.log("historical data received")
     })
     
-    socket.off("historicalData", historicalDataListener);
 
     socket.on('newCandle', (data) => {
         //add data processing
@@ -79,7 +80,12 @@ function TradePage() {
             });
     })
 
-  }, []); // Empty dependency array to ensure this runs only once when the component mounts
+    return () => {
+        socket.off('historicalData');
+        socket.off('newCandle');
+      };
+
+  }, [tradePair]); // Empty dependency array to ensure this runs only once when the component mounts
 
    
 
@@ -102,6 +108,7 @@ function TradePage() {
 
         {/* Side Panel */}
         <div className="w-[20%] p-4 flex flex-col space-y-4 border-l border-gray-800 items-center text-center overflow-y-auto">
+          <h2>Total Portfolio Value: {currentPortfolioValue} </h2>
           <h3>Current Position Value: {currentHoldings}</h3>
           <input
             value={tradeAmount}
