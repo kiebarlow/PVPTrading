@@ -20,8 +20,8 @@ const TradeView = ({ data }) => {
     title: "BTC/USDT Candlestick Chart",
     xaxis: { rangeslider: { visible: false } },
     yaxis: { title: "Price (USDT)" },
-    plot_bgcolor: "#000000",
-    paper_bgcolor: "000000",
+    plot_bgcolor: "#0D0D0D",
+    paper_bgcolor: "0D0D0D",
   };
 
   return <Plot data={chartData} layout={layout} style={{ width: '100%', height: '100%' }}/>;
