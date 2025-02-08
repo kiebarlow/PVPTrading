@@ -3,13 +3,17 @@ from flask_socketio import SocketIO, emit, join_room, leave_room, close_room
 import time
 import threading
 import DataHandler, Database, solanaStuff
+import asyncio
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'jrhbieygfhcbvhwruygv32rughf123ttrplace1beuygfreoubvwro'
-socketio = SocketIO(app, ping_timeout=5, ping_interval=15, logger=True, engineio_logger=True)
+socketio = SocketIO(app, ping_timeout=5, ping_interval=15, logger=True, engineio_logger=True, cors_allowed_origins=["http://localhost:5173"])
 
 # Initialize the data handler
 dataHandler = DataHandler.BinanceDataHandler(socketio)
+async def start_data_handler():
+    await dataHandler.connect()
+
 
 lobbies = {}
 LOBBY_TIMER_DURATION = 60
@@ -151,13 +155,15 @@ def handleDisconnect():
             emit('lobbyList', lobbies, broadcast=True)
             break      
         
-@socketio.on('historicalData')
+@socketio.on('historicalDataRequest')
 def handleHistoricalData(data):
+    print("request for historical data received")
     ticker = str(data).upper()
     timeframe = 10
     # Get historical data for the specified ticker and timeframe.
-    historicalData = dataHandler.getCachedKlines(ticker, timeframe)
+    historicalData = dataHandler.getCachedKlines(ticker)
     emit('historicalData', historicalData)
         
 if __name__ == "__main__":
+    socketio.start_background_task(asyncio.run, start_data_handler())
     socketio.run(app, debug=True)

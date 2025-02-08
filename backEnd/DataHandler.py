@@ -52,29 +52,27 @@ class BinanceDataHandler:
                 "quantity": float(data['q']),
                 "timestamp": int(data['T'])
             }
-            self.latestTrades[symbol][tradeInfo['timestamp']] = tradeInfo
+            self.latestTrades[symbol][tradeInfo['time']] = tradeInfo
             self.trimDict(self.latestTrades[symbol], self.maxTrades)
             print(symbol, " trade")
             # Check price change
             if len(self.latestTrades[symbol]) > 1:
                 timestamps = sorted(self.latestTrades[symbol].keys())
                 if self.latestTrades[symbol][timestamps[-2]]['price'] != self.latestTrades[symbol][timestamps[-1]]['price']:
-                    self.socketio.emit("tradeUpdate", self.latestTrades[symbol], broadcast=True)
+                    self.socketio.emit("tradeUpdate", self.latestTrades[symbol])
                     self.printTrade(symbol)
         elif '@kline' in stream:
             klineInfo = {
+                "time": int(data['k']['t']),
                 "open": float(data['k']['o']),
-                "high": float(data['k']['h']),
-                "low": float(data['k']['l']),
                 "close": float(data['k']['c']),
-                "volume": float(data['k']['v']),
-                "trades": int(data['k']['n']),
-                "timestamp": int(data['k']['t'])
+                "high": float(data['k']['h']),
+                "low": float(data['k']['l'])
             }
-            self.latestKlines[symbol][klineInfo['timestamp']] = klineInfo
+            self.latestKlines[symbol][klineInfo['time']] = klineInfo
             self.trimDict(self.latestKlines[symbol], self.maxKlines)
             self.printKline(symbol)
-            self.socketio.emit("newCandle", {"symbol": symbol, "klines": list(self.latestKlines[symbol].values())}, broadcast=True)
+            self.socketio.emit("newCandle", {"symbol": symbol, "klines": list(self.latestKlines[symbol].values())})
     
     def trimDict(self, dictionary, maxLength):
         while len(dictionary) > maxLength:
