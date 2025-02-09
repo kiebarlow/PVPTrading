@@ -1,6 +1,6 @@
 # PVPTrading
 
-Welcome to [pvptrading.club][https://pvptrading.club], where you can test your crypto trading skills against your friends (or enemies) and win the jackpot!
+Welcome to [pvptrading.club](https://pvptrading.club), where you can test your crypto trading skills against your friends (or enemies) and win the jackpot!
 
 ## Table of Contents
 
@@ -11,7 +11,7 @@ Welcome to [pvptrading.club][https://pvptrading.club], where you can test your c
 
 ## Introduction
 
-PVPTrading is a platform made for Hackaway v8 using Flask and React that allows users to engage in competitive crypto trading. Users can create or join lobbies, trade cryptocurrencies in real-time, win the prize pool by having the highest balance when the time expires.
+PVPTrading is a platform made for Hackaway v8 using Flask, React and real-time Binance data, where users can engage in competitive crypto trading. Users can create or join lobbies, trade cryptocurrencies in real-time, and win the prize pool by having the highest balance when the time expires.
 
 ## Features
 
