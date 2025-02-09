@@ -206,6 +206,10 @@ def handle_historical_data(data):
        
 from flask import request, jsonify
 
+@app.route("/createGame", methods=["POST"])
+def deleteTHis():
+    return jsonify({"success": True}), 200
+
 @app.route("/registerUser", methods=['POST'])
 def siteRegister():
     data = request.json  # Get JSON data from request

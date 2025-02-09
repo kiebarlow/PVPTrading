@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import Cookies from 'js-cookie';
 import { sha256 } from "crypto-hash";
 import { useNavigate } from "react-router"
+import axios from "axios";
 function LoginPage() {
   const apiUrl = 'http://127.0.0.1:5000';
   const [isRegister, setIsRegister] = useState(false);
@@ -12,24 +13,40 @@ function LoginPage() {
 
   // Register function inside the component
   const register = async (userName, password) => {
-    const hashedPassword = await sha256(password); // Hash password
-    const response = await fetch(`${apiUrl}/registerUser`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userName, password: hashedPassword }),
-    });
-    return response.json();
-  };
+    const hashedPassword = await sha256(password);
+    try {
+        const response = await axios.post('/api/registerUser',  // Note the added /api prefix
+            { userName, password: hashedPassword },
+            { 
+                headers: { "Content-Type": "application/json" },
+                withCredentials: true  // If you need to send cookies
+            }
+        );
+        return response.data;
+    } catch (error) {
+        console.error("Registration error:", error);
+        return { success: false, message: error.response?.data?.message || "An error occurred" };
+    }
+};
+
 
   const login = async (userName, password) => {
     // Replace with your actual login function
     const hashedPassword = await sha256(password); // Hash password
-    const response = await fetch(`${apiUrl}/loginUser`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userName, password: hashedPassword }),
-    });
-    return response.json();
+    try {
+      const response = await axios.post('/api/loginUser',  // Note the added /api prefix
+          { userName, password: hashedPassword },
+          { 
+              headers: { "Content-Type": "application/json" },
+              withCredentials: true  // If you need to send cookies
+          }
+      );
+      return response.data;
+  } catch (error) {
+      console.error("Registration error:", error);
+      return { success: false, message: error.response?.data?.message || "An error occurred" };
+  }
+
   };
 
   const handleAuth = async () => {
