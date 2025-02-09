@@ -8,7 +8,7 @@ def connect():
 
 # Creates a new user in the database.
 def createUser(usrNm, passwd):
-    conn = sqlite3.connect('PVPTradingDatabase.db')
+    conn = connect()
     cursor = conn.cursor()
     usrID = str(uuid.uuid4())
     wallID = str(uuid.uuid4())
@@ -38,10 +38,10 @@ def withdrawGems(usrID,withdrawal):
     conn.commit()
     conn.close()
     
-def checkNumOfGems(usrID):
+def checkNumOfGems(usrName):
     conn = connect()
     cursor = conn.cursor()
-    cursor.execute("SELECT Gems FROM User WHERE UserID = ?",(usrID))
+    cursor.execute("SELECT Gems FROM User WHERE UserName = ?",(usrName))
     balance = cursor.fetchall()
     conn.close()
     return balance
