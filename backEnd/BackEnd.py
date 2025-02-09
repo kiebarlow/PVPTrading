@@ -260,7 +260,7 @@ def DepositGems():
         addGems(usrID,depo)
         conn.close()
         numGems = checkNumOfGems(usrID)
-        return jsonify({"success": True, "message": "Deposit successful"}), 200
+        return jsonify({"success": True, "message": "Deposit successful", "gems":numGems}), 200
     return jsonify({"success": False, "message": "No deposit made"}), 401
  
 if __name__ == "__main__":
