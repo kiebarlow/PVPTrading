@@ -1,149 +1,113 @@
 from flask_socketio import SocketIO
 from typing import Dict, List
-
-class GameManager:
-    def __init__(self, socketio):
-        self.socketio = socketio
-        self.games = {}
-    
-    def createGame(self, gameId: str, userIds: List[str]):
-        self.games[gameId] = Game(self.socketio, gameId, userIds)
-    
-    def getGame(self, gameId):
-        return self.games[gameId]
-    
-    def updatePnL(self, data):
-        for game in self.games.values():
-            game.handleNewCandle(game, data)
-            
-    def openPosition(self, gameId, userId, symbol, margin, leverage):
-        self.gameManagers[gameId].openPosition(userId, symbol, margin, leverage)
+import time  
+        
 class Game:
-    def __init__(self, socketio: SocketIO, gameId: str, userIds: List[str]):
-        self.socketio = socketio
-        self.userBalances: Dict[str, float] = {}
-        self.userPositions: Dict[str, Dict[str, List[dict]]] = {}  # userId -> symbol -> list of positions
-        self.gameId = gameId
-        self.latestCandles: Dict[List[dict]] = {}
-        for userId in userIds:
-            self.userBalances[userId] = 10000
-            self.userPositions[userId] = {}
-        self.userIds = userIds
+    def init(self, gameID, users) -> None:
+        self.gameID = None
+        self.users = []
+        self.timeStart = time.now()
+        self.timeFinish = time.now() + 180
+        self.gameInProgress
+        self.jackpot = 0
 
-    def openPosition(self, userId: str, symbol: str, margin: float, leverage: float):
-        if userId not in self.userBalances:
-            self.userBalances[userId] = 10000
+        self.btcPrice = None
+        self.ethPrice = None
+        self.solPrice = None
 
-        if userId not in self.userPositions:
-            self.userPositions[userId] = {}
+    def updateCryptoPrice(self, data):
+        self.btcPrice = data.btcPrice
+        self.ethPrice = data.ethPrice
+        self.solPrice = data.solPrice
 
-        if symbol not in self.userPositions[userId]:
-            self.userPositions[userId][symbol] = []
+    def updateUserPortValues(self):
+        for user in self.users:
+            value = user.updatePortValue([self.btcPrice, self.ethPrice, self.solPrice])
+            if value <= 0:
+                user.liquidated()
 
-        tradePrice = self.latestCandles[symbol][-1]["price"]
-        quantity = abs(margin * leverage) / tradePrice
-        positionType = "long" if margin > 0 else "short"
 
-        if self.userBalances[userId] >= abs(margin):
-            self.userBalances[userId] -= abs(margin)
-            
-            newPosition = {
-                "symbol": symbol,
-                "type": positionType,
-                "quantity": quantity,
-                "entryPrice": tradePrice,
-                "leverage": leverage,
-                "margin": abs(margin)
-            }
-            
-            self.userPositions[userId][symbol].append(newPosition)
-            self.emitPortfolioUpdate(userId)
-        else:
-            self.socketio.emit("error", {
-                "userId": userId,
-                "gameId": self.gameId,
-                "message": "Insufficient balance"
-            }, room=self.gameId)
+    def editPosition(self, userId, coin, margin, lev): # maybe do amount maybe margin and lev
+        coinPrice = 0
+        amount = margin * lev
+        # mega shit code below
+        if coin == "BTC":
+            coinPrice = self.btcPrice
+        if coin == "ETH":
+            coinPrice = self.ethPrice
+        if coin == "SOL":
+            coinPrice = self.solPrice
+        for user in self.users:
+            if user.getUserId() == userId and user.getUserState()["balance"] >= margin:
+                user.updatePosition(amount, coin, coinPrice)
 
-    def calculatePositionPnL(self, position: dict, currentPrice: float) -> float:
-        priceDiff = currentPrice - position["entryPrice"]
-        if position["type"] == "short":
-            priceDiff = -priceDiff
-        return priceDiff * position["quantity"] * position["leverage"]
+    def endGame(self):
+        pass
 
-    def handleNewCandle(self, candleData: dict):
-        self.latestCandles.append(candleData)
-        # pop the first element if the length of the list is greater than 10
-        if len(self.latestCandles) > 10:
-            self.latestCandles.pop(0)
+    def calcPNL(self):
+        for user in self.users:
+            user.updatePortValue([self.btcPrice,self.ethPrice,self.solPrice])
+
+    #Get all details to send to front end
+    def getUserState(self, userId):
+        for user in self.users:
+            if user.getUserId() == userId:
+                return user.getUserState() # balance positions pnl liquidated
+
+
+    def addUser(self, userId):
+        self.users.append(User(userId, 1000))
+
+    def getWinner(self):
+        currentWinner = None
+        highestPnl = 0
+        for user in self.users:
+            pnl = user.updatePortValue([self.btcPrice, self.ethPrice, self.solPrice])
+            if highestPnl < pnl:
+                highestPnl = pnl
+                currentWinner = user.getUserId()
+        return currentWinner
         
-        for symbol, candle in candleData.items():
-            currentPrice = candle["close"]  # Use closing price from klineInfo
+class User:
+    def init(self, userId, startBalance):
+        self.balance = startBalance
+        self.listPositions = {"BTC": 0, "ETH": 0, "SOL": 0}
+        self.userId = userId
+        self.debt = 0
+        self.pnl = 0
+        self.liquidated = False
 
-            for userId in list(self.userPositions.keys()):  # Copy keys to avoid modification during iteration
-                if symbol not in self.userPositions[userId]:  
-                    continue  # Skip users who don't have positions in this symbol
-                
-                positions = self.userPositions[userId][symbol]
-                remainingPositions = []
-                totalPnL = 0
+    def getUserState(self):
+        return {"balance": self.balance, "positions": self.listPositions, "pnl": self.pnl, "liquidated": self.liquidated}
 
-                for position in positions:
-                    pnl = self.calculatePositionPnL(position, currentPrice)
-                    totalPnL += pnl
+    def updatePortValue(self, prices): # must call this to update port value
+        count = 0
+        value = 0
+        for i in self.listPositions:
+            value = value + i * prices[count]
+            count += 1
+        self.pnl = self.balance + value - self.debt
+        if self.pnl <= 0:
+            self.liquidated = True
+        return self.pnl
 
-                    # Check if the position should be liquidated
-                    if (position["type"] == "long" and pnl <= -position["margin"] * position["leverage"]) or \
-                    (position["type"] == "short" and pnl <= -position["margin"] * position["leverage"]):
-                        self.userBalances[userId] = self.userBalances.get(userId, 0) + position["margin"] + pnl
-                    else:
-                        remainingPositions.append(position)
+    def getDebt(self):
+        return self.debt
 
-                # Update user positions
-                if remainingPositions:
-                    self.userPositions[userId][symbol] = remainingPositions
-                else:
-                    del self.userPositions[userId][symbol]
-                    if not self.userPositions[userId]:  # Remove user if no positions remain
-                        del self.userPositions[userId]
+    def addBalance(self, newBalance):
+        self.balance += newBalance
 
-                # Handle account liquidation
-                if self.userBalances.get(userId, 0) <= 0:
-                    self.handleLiquidation(userId)
-                else:
-                    self.emitPortfolioUpdate(userId)
+    def addDebt(self, addDebt):
+        self.debt += addDebt
 
-    def handleLiquidation(self, userId: str):
-        del self.userBalances[userId]
-        if userId in self.userPositions:
-            del self.userPositions[userId]
-            
-        self.socketio.emit("liquidation", {
-            "userId": userId,
-            "gameId": self.gameId
-        }, room=self.gameId)
+    def liquidated(self):
+        self.liquidated = True
 
-    def calculateTotalPortfolioValue(self, userId: str) -> float:
-        if userId not in self.userBalances:
-            return 0
+    def getUserId(self):
+        return self.userId
 
-        totalValue = self.userBalances[userId]
-        
-        if userId in self.userPositions:
-            for symbol in self.userPositions[userId]:
-                currentPrice = self.latestCandles[symbol][-1]["price"]
-                for position in self.userPositions[userId][symbol]:
-                    totalValue += self.calculatePositionPnL(position, currentPrice)
-
-        return totalValue
-
-    def emitPortfolioUpdate(self, userId: str):
-        totalValue = self.calculateTotalPortfolioValue(userId)
-        
-        self.socketio.emit("portfolioUpdate", {
-            "userId": userId,
-            "gameId": self.gameId,
-            "balance": self.userBalances[userId],
-            "totalPortfolioValue": totalValue,
-            "positions": self.userPositions.get(userId, {})
-        }, room=self.gameId)
+    def updatePosition(self, amount, coin, coinPrice): # coin must be string of either "BTC" "ETH" "SOL"
+        numOfCoins = amount / coinPrice
+        newCoinAmountMod = abs(self.listPositions[coin] + numOfCoins)
+        self.debt += (newCoinAmountMod - self.listPositions[coin]) * coinPrice
+        return self.getUserState()

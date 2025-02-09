@@ -5,31 +5,44 @@ import json
 import websockets
 import time
 from datetime import datetime
-import GameManager
+import GameManager, Database
 
 class BinanceDataHandler:
     def __init__(self, socketio: SocketIO):
         self.socketio = socketio
         self.binanceWsUrl = "wss://stream.binance.com:443/stream?streams=btcusdt@trade/solusdt@trade/ethusdt@trade"
         self.latestTrades = {"BTCUSDT": {}, "ETHUSDT": {}, "SOLUSDT": {}}
-        self.latestKlines = {"BTCUSDT": {}, "ETHUSDT": {}, "SOLUSDT": {}}  # 10 min of 1s klines
+        self.latestKlines = {"BTCUSDT": {}, "ETHUSDT": {}, "SOLUSDT": {}}  
         self.maxTrades = 100
-        self.maxKlines = 600
+        self.maxKlines = 600 # 10 min of 1s klines
         self.mostRecentTimestamp = 0
         self.numOfSymbolsRecieved = 0 
-        self.gameManager = GameManager.GameManager(socketio)
-        
-    def createGame(self, gameId, userIds):
-        self.gameManager.createGame(gameId, userIds)
+        self.games = {}
+    
+    def createGame(self, gameId, userIds, entryFee):
+        self.games[gameId] = GameManager.Game(self.socketio, gameId, userIds, entryFee)
+    
+    def endGame(self, gameId):
+        winner = self.games[gameId].getWinner()
+        # update winner's balance
+        Database.addGems(winner, self.games[gameId].getJackpot())
+        del self.games[gameId]    
 
     def getGame(self, gameId):
-        return self.gameManager.getGame(gameId)
-
-    def updatePnL(self, data):
-        self.gameManager.updatePnL(data)
-            
-    def openPosition(self, gameId, userId, symbol, margin, leverage):
-        self.gameManager.openPosition(gameId, userId, symbol, margin, leverage)
+        return self.games[gameId]
+    
+    def updateCryptoPrice(self, btc, eth, sol):
+        # Check if game is still active
+        for gameId, game in self.games.items():
+            if time.time() < game.timeFinish:
+                game.updateCryptoPrice(btc, eth, sol)
+            elif time.time() >= game.timeFinish:
+                self.endGame(gameId)
+        
+    def editPosition(self, gameId, userId, symbol, margin, leverage):
+        self.gameManagers[gameId].openPosition(userId, symbol, margin, leverage)
+        
+        
     
     async def connect(self):
         async with websockets.connect(self.binanceWsUrl) as ws:
@@ -101,11 +114,7 @@ class BinanceDataHandler:
                     "ETHUSDT": list(self.latestKlines["ETHUSDT"].values())[-1],
                     "SOLUSDT": list(self.latestKlines["SOLUSDT"].values())[-1]
                 })
-                self.updatePnL({
-                    "BTCUSDT": list(self.latestKlines["BTCUSDT"].values())[-1],
-                    "ETHUSDT": list(self.latestKlines["ETHUSDT"].values())[-1],
-                    "SOLUSDT": list(self.latestKlines["SOLUSDT"].values())[-1]
-                })
+                self.gameManager.updateCryptoPrice(self.latestKlines["BTCUSDT"], self.latestKlines["ETHUSDT"], self.latestKlines["SOLUSDT"])
                 
     
     def trimDict(self, dictionary, maxLength):
