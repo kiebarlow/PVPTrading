@@ -14,7 +14,6 @@ function GameBrowser() {
       console.error("Entry cost is required");
       return;
     }
-
     try {
       const response = await axios.post(
         "/api/createGame", // Proxy should redirect this to backend
@@ -26,7 +25,7 @@ function GameBrowser() {
       );
       console.log("Game created:", response.data);
       //NAvigates to the trade page
-      navigate('/TradePage')
+      navigate('/playGame');
       return response.data;
     } catch (error) {
       console.error("Game creation error:", error.response?.data?.message || "An error occurred");

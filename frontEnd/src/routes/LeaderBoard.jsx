@@ -5,8 +5,8 @@ import LeaderBoardEntry from "../components/leaderBoard/LeaderBoardEntry";
 function LeaderBoard() {
   const [leaderboardData, setLeaderboardData] = useState([
     { position: 1, username: "seb", profit: "1232134" },
-    { position: 2, username: "alex", profit: "567890" },
-    { position: 3, username: "john", profit: "876543" },
+    { position: 2, username: "alex", profit: "876543" },
+    { position: 3, username: "john", profit: "345678" },
     { position: 4, username: "jane", profit: "345678" },
     { position: 5, username: "david", profit: "987654" },
   ]);
