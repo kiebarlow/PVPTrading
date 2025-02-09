@@ -1,274 +1,206 @@
 from flask import Flask, render_template, request
 from flask_socketio import SocketIO, emit, join_room, leave_room, close_room
-from Database import *
-from solanaStuff import *
-from flask_cors import CORS
 import time
 import threading
-import DataHandler
+import DataHandler, Database, solanaStuff
+import asyncio
+import GameManager
+
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'jrhbieygfhcbvhwruygv32rughf123ttrplace1beuygfreoubvwro'
-socketio = SocketIO(app,ping_timeout=5, ping_interval=15, logger=True, engineio_logger=True, cors_allowed_origins="http://localhost:5173")
-CORS(app, resources={r"/*": {"origins": "http://localhost:5173"}})
+socketio = SocketIO(app, ping_timeout=5, ping_interval=15, logger=True, engineio_logger=True, cors_allowed_origins=["http://localhost:5173"])
 
 # Initialize the data handler
-data_handler = DataHandler.BinanceDataHandler(socketio)
+dataHandler = DataHandler.BinanceDataHandler(socketio)
+async def start_data_handler():
+    await dataHandler.connect()
+
+gameManager = GameManager.GameManager(socketio)
 
 lobbies = {}
 LOBBY_TIMER_DURATION = 60
 
-def start_lobby_timer(lobby_id):
-    def timer_thread():
+def startLobbyTimer(lobbyId):
+    def timerThread():
         remaining = LOBBY_TIMER_DURATION
         while remaining > 0:
             # Emit the current timer value to all clients in the lobby
-            socketio.emit('lobby_timer', {'lobby_id': lobby_id, 'time_remaining': remaining}, room=lobby_id)
+            socketio.emit('lobbyTimer', {'lobbyId': lobbyId, 'timeRemaining': remaining})
             time.sleep(1)
             remaining -= 1
         # Timer finished—broadcast that the game is starting!
-        socketio.emit('game_start', {'lobby_id': lobby_id}, room=lobby_id)
-    threading.Thread(target=timer_thread).start()
+        socketio.emit('gameStart', {'lobbyId': lobbyId}, room=lobbyId)
+    threading.Thread(target=timerThread).start()
 
 @app.route("/")
-def hello_world():
+def helloWorld():
     return "<p>Hello World!</p>"
 
 @socketio.on('connect')
-def on_connect():
+def onConnect():
     emit('lobby_list', lobbies)
     
-@socketio.on('create_lobby')
-def handle_create_lobby(data):
+@socketio.on('createLobby')
+def handleCreateLobby(data):
     """
     Expected data: {
-      'lobby_id': unique identifier,
-      'lobby_name': display name,
-      'min_coins': minimum coins required to join (e.g., 50),
-      'user_id': the user's name,
+      'lobbyId': unique identifier,
+      'lobbyName': display name,
+      'minCoins': minimum coins required to join (e.g., 50),
+      'userId': the user's name,
       'coins': the number of coins the user has
     }
     """
-    lobby_id = data.get('lobby_id')
-    lobby_name = data.get('lobby_name')
-    min_coins = data.get('min_coins', 0)
-    user_id = data.get('user_id')
-    user_coins = data.get('coins',0)
+    lobbyId = data.get('lobbyId')
+    lobbyName = data.get('lobbyName')
+    minCoins = data.get('minCoins', 0)
+    userId = data.get('userId')
+    userCoins = data.get('coins', 0)
     
     # Check coin requirement.
-    if user_coins < min_coins:
+    if userCoins < minCoins:
         emit('error', {'msg': 'Not enough coins to create this lobby.'})
         return
     # Check if the user is already in a lobby
     for lobby in lobbies.values():
-        if user_id in lobby['players']:
+        if userId in lobby['players']:
             emit('error', {'msg': 'User already in a lobby.'})
             return
     
-    if lobby_id and lobby_id not in lobbies:
-        lobbies[lobby_id] = {
-            'name': lobby_name,
+    if lobbyId and lobbyId not in lobbies:
+        lobbies[lobbyId] = {
+            'name': lobbyName,
             'players': [],
-            'min_coins': min_coins,
+            'min_coins': minCoins,
         }
         # Broadcast updated lobby list to all connected clients.
-        emit('lobby_list', lobbies, broadcast=True)
-        start_lobby_timer(lobby_id)
+        emit('lobbyList', lobbies, broadcast=True)
+        startLobbyTimer(lobbyId)
     else:
         emit('error', {'msg': 'Invalid lobby id or lobby already exists.'})
         
-@socketio.on('join_lobby')
-def handle_join_lobby(data):
+@socketio.on('joinLobby')
+def handleJoinLobby(data):
     """
     Expected data: {
-      'lobby_id': the lobby the user wants to join,
-      'user_id': the user's name,
+      'lobbyId': the lobby the user wants to join,
+      'userId': the user's name,
       'coins': the number of coins the user has
     }
     """
-    lobby_id = data.get('lobby_id')
-    user_id = data.get('user_id')
-    user_coins = data.get('coins', 0)
+    lobbyId = data.get('lobbyId')
+    userId = data.get('userId')
+    userCoins = data.get('coins', 0)
     
-    if lobby_id not in lobbies:
+    if lobbyId not in lobbies:
         emit('error', {'msg': 'Lobby not found.'})
         return
 
-    lobby = lobbies[lobby_id]
-    required = lobby.get('min_coins', 0)
+    lobby = lobbies[lobbyId]
+    required = lobby.get('minCoins', 0)
     
     # Check coin requirement.
-    if user_coins < required:
+    if userCoins < required:
         emit('error', {'msg': 'Not enough coins to join this lobby.'})
         return
     # Check if the user is already in a lobby
     for lobby in lobbies.values():
-        if user_id in lobby['players']:
+        if userId in lobby['players']:
             emit('error', {'msg': 'User already in a lobby.'})
             return
 
     # Add user to the lobby.
-    lobby['players'].append(user_id)
-    join_room(lobby_id)
+    lobby['players'].append(userId)
+    join_room(lobbyId)
     
     # Broadcast the updated lobby list to all clients.
-    emit('lobby_list', lobbies, broadcast=True)
+    emit('lobbyList', lobbies, broadcast=True)
     
-@socketio.on('leave_lobby')
-def handle_leave_lobby(data):
+@socketio.on('leaveLobby')
+def handleLeaveLobby(data):
     """
     Expected data: {
-      'lobby_id': the lobby the user wants to leave,
-      'user_id': the user's name
+      'lobbyId': the lobby the user wants to leave,
+      'userId': the user's name
     }
     """
-    lobby_id = data.get('lobby_id')
-    user_id = data.get('user_id')
+    lobbyId = data.get('lobbyId')
+    userId = data.get('userId')
     
-    if lobby_id not in lobbies:
+    if lobbyId not in lobbies:
         emit('error', {'msg': 'Lobby not found.'})
         return
 
-    lobby = lobbies[lobby_id]
-    if user_id in lobby['players']:
-        lobby['players'].remove(user_id)
-        leave_room(lobby_id)
+    lobby = lobbies[lobbyId]
+    if userId in lobby['players']:
+        lobby['players'].remove(userId)
+        leave_room(lobbyId)
         if not lobby['players']:
-            del lobbies[lobby_id]
-            close_room(lobby_id)
+            del lobbies[lobbyId]
+            close_room(lobbyId)
         
         # Broadcast the updated lobby list to all clients.
-        emit('lobby_list', lobbies, broadcast=True)
+        emit('lobbyList', lobbies, broadcast=True)
     else:
         emit('error', {'msg': 'User not found in lobby.'})
         
-# No fucking idea hopefully copilot cooked        
 @socketio.on('disconnect')
-def handle_disconnect():
+def handleDisconnect():
     print('Client disconnected')
-    for lobby_id, lobby in lobbies.items():
+    for lobbyId, lobby in lobbies.items():
         if request.sid in lobby['players']:
             lobby['players'].remove(request.sid)
-            leave_room(lobby_id)
+            leave_room(lobbyId)
             if not lobby['players']:
-                del lobbies[lobby_id]
-                close_room(lobby_id)
-            emit('lobby_list', lobbies, broadcast=True)
+                del lobbies[lobbyId]
+                close_room(lobbyId)
+            emit('lobbyList', lobbies, broadcast=True)
             break      
+        
+@socketio.on('openPosition')
+def handleOpenPosition(data):
+    """
+    Expected data: {
+        'gameId': the game the user is playing,
+        'userId': the user's name,
+        'symbol': the symbol the user is trading,
+        'leverage': the leverage used,
+        'margin': the margin used
+    }
+    """
+    gameId = data.get('gameId')
+    userId = data.get('userId')
+    symbol = data.get('symbol')
+    leverage = data.get('leverage')
+    margin = data.get('margin')
+    
+    # Check if the game exists.
+    if gameId not in GameManager.games:
+        emit('error', {'msg': 'Game not found.'})
+        return
+    
+    game = gameManager.getGame(gameId)
+    
+    # Check if the user is in the game.
+    if userId not in game.userIds:
+        emit('error', {'msg': 'User not found in game.'})
+        return
+    
+    gameManager.openPosition(gameId, userId, symbol, margin, leverage)
 
-#handle trade requests  
-@socketio.on('trade_open')
-def handle_trade_open(data):
-    """
-    Expected data: {
-      'lobby_id': the lobby the trade is happening in,
-      'user_id': the user initiating the trade,
-      'ticker': the stock ticker being traded,
-      'quantity': the number of shares being traded,
-      'leverage': the leverage being used (e.g., 1.5x),
-      'action': the action being taken (e.g., 'buy' or 'sell')
-    }
-    """
-    lobby_id = data.get('lobby_id')
-    user_id = data.get('user_id')
-    ticker = data.get('ticker')
-    quantity = data.get('quantity')
-    leverage = data.get('leverage', 1)
-    action = data.get('action')
-    timestamp = time.time()
-    # check closest timestamp of binance data
-    
-    
-    emit('trade_open', data, room=lobby_id)
+@socketio.on('newCandle')
+def handleNewCandle(data):
+    gameManager.updatePnL(data)    
         
-@socketio.on('trade_close')
-def handle_trade_close(data):
-    """
-    Expected data: {
-      'lobby_id': the lobby the trade is happening in,
-      'user_id': the user initiating the trade,
-      'ticker': the stock ticker being traded,
-      'quantity': the number of shares being traded,
-      'leverage': the leverage being used (e.g., 1.5x),
-      'action': the action being taken (e.g., 'buy' or 'sell')
-    }
-    """
-    lobby_id = data.get('lobby_id')
-    user_id = data.get('user_id')
-        
-@socketio.on('historicalData')
-def handle_historical_data(data):
+@socketio.on('historicalDataRequest')
+def handleHistoricalData(data):
+    print("request for historical data received")
     ticker = str(data).upper()
-    timeframe = 10
     # Get historical data for the specified ticker and timeframe.
-    historical_data = data_handler.get_cached_klines(ticker, timeframe)
-    emit('historicalData', historical_data)
-       
-from flask import request, jsonify
-
-@app.route("/createGame", methods=["POST"])
-def deleteTHis():
-    return jsonify({"success": True}), 200
-
-@app.route("/registerUser", methods=['POST'])
-def siteRegister():
-    data = request.json  # Get JSON data from request
-    usrName = data.get('userName')
-    passwd = data.get('password')
-
-    if not usrName or not passwd:
-        return jsonify({"success": False, "message": "Missing username or password"}), 400
-
-    available = checkUser(usrName, passwd)
-
-    if available == []:
-        wallID = createUser(usrName, passwd)
-        user = SolanaStuff()
-        user.createUserWallet()
-        pub = user.publicKey
-        priv = user.privateKey
-        createWallet(wallID, pub, priv)
+    historicalData = dataHandler.getCachedKlines(ticker)
+    emit('historicalData', historicalData)
         
-        return jsonify({"success": True, "message": "User registered successfully", "userName":usrName}), 200
-    else:
-        return jsonify({"success": False, "message": "Username already exists"}), 400      
-
-
-
-@app.route("/loginUser", methods=['POST'])
-def siteLogin():
-    data = request.get_json()  # Parse JSON request body
-    usrName = data.get('userName')
-    passwd = data.get('password')
-    if not usrName or not passwd:
-        return jsonify({"success": False, "message": "Username and password are required"}), 400
-    user = checkUser(usrName, passwd)  # Assuming this function checks credentials
-    if user != []:
-        return jsonify({"success": True, "message": "Login successful", "userName":usrName}), 200
-    else:
-        return jsonify({"success": False, "message": "Invalid credentials"}), 401
-    
-    
-app.route("/checkForDeposit",methods=['POST'])
-def DepositGems():
-    data = request.get_json()
-    usrID = data.get('userId')# Might have to rewrite this to username.
-    conn = connect()
-    cursor = conn.cursor()
-    cursor.execute("SELECT WalletID FROM User WHERE UserID = ?", (usrID))
-    wallID = cursor.fetchall()
-    cursor.execute("SELECT * FROM Wallet WHERE WalletID = ?",(wallID))
-    wallInfo = cursor.fetchall()
-    depo = SolanaStuff.checkForDeposit(wallInfo[1], wallInfo[2])
-    if depo != 0:
-        addGems(usrID,depo)
-        conn.close()
-        numGems = checkNumOfGems(usrID)
-        return jsonify({"success": True, "message": "Deposit successful", "gems":numGems}), 200
-    return jsonify({"success": False, "message": "No deposit made"}), 401
- 
 if __name__ == "__main__":
+    socketio.start_background_task(asyncio.run, start_data_handler())
     socketio.run(app, debug=True)
-    
-    
-    
