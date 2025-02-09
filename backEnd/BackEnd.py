@@ -16,7 +16,7 @@ dataHandler = DataHandler.BinanceDataHandler(socketio)
 async def start_data_handler():
     await dataHandler.connect()
 
-gameManager = GameManager.GameManager(socketio)
+#gameManager = GameManager.GameManager(socketio)
 
 lobbies = {}
 LOBBY_TIMER_DURATION = 60
@@ -175,23 +175,11 @@ def handleOpenPosition(data):
     leverage = data.get('leverage')
     margin = data.get('margin')
     
-    # Check if the game exists.
-    if gameId not in GameManager.games:
-        emit('error', {'msg': 'Game not found.'})
-        return
-    
-    game = gameManager.getGame(gameId)
-    
-    # Check if the user is in the game.
-    if userId not in game.userIds:
-        emit('error', {'msg': 'User not found in game.'})
-        return
-    
-    gameManager.openPosition(gameId, userId, symbol, margin, leverage)
+    dataHandler.openPosition(gameId, userId, symbol, margin, leverage)
 
-@socketio.on('newCandle')
-def handleNewCandle(data):
-    gameManager.updatePnL(data)    
+# @socketio.on('newCandle')
+# def handleNewCandle(data):
+#     gameManager.updatePnL(data)    
         
 @socketio.on('historicalDataRequest')
 def handleHistoricalData(data):

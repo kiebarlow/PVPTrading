@@ -5,6 +5,7 @@ import json
 import websockets
 import time
 from datetime import datetime
+import GameManager
 
 class BinanceDataHandler:
     def __init__(self, socketio: SocketIO):
@@ -16,6 +17,19 @@ class BinanceDataHandler:
         self.maxKlines = 600
         self.mostRecentTimestamp = 0
         self.numOfSymbolsRecieved = 0 
+        self.gameManager = GameManager.GameManager(socketio)
+        
+    def createGame(self, gameId, userIds):
+        self.gameManager.createGame(gameId, userIds)
+
+    def getGame(self, gameId):
+        return self.gameManager.getGame(gameId)
+
+    def updatePnL(self, data):
+        self.gameManager.updatePnL(data)
+            
+    def openPosition(self, gameId, userId, symbol, margin, leverage):
+        self.gameManager.openPosition(gameId, userId, symbol, margin, leverage)
     
     async def connect(self):
         async with websockets.connect(self.binanceWsUrl) as ws:
@@ -86,7 +100,12 @@ class BinanceDataHandler:
                     "BTCUSDT": list(self.latestKlines["BTCUSDT"].values())[-1],
                     "ETHUSDT": list(self.latestKlines["ETHUSDT"].values())[-1],
                     "SOLUSDT": list(self.latestKlines["SOLUSDT"].values())[-1]
-                }, include_self=True)
+                })
+                self.updatePnL({
+                    "BTCUSDT": list(self.latestKlines["BTCUSDT"].values())[-1],
+                    "ETHUSDT": list(self.latestKlines["ETHUSDT"].values())[-1],
+                    "SOLUSDT": list(self.latestKlines["SOLUSDT"].values())[-1]
+                })
                 
     
     def trimDict(self, dictionary, maxLength):

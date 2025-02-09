@@ -14,7 +14,7 @@ class GameManager:
     
     def updatePnL(self, data):
         for game in self.games.values():
-            game.handleNewCandle(game)
+            game.handleNewCandle(game, data)
             
     def openPosition(self, gameId, userId, symbol, margin, leverage):
         self.gameManagers[gameId].openPosition(userId, symbol, margin, leverage)
