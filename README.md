@@ -57,6 +57,6 @@ To get started with PVPTrading, follow these steps:
     ```
 
 ## Usage
-    Open your web browser and navigate to http://localhost:5000.
-    Create a new lobby or join an existing one.
-    Start trading and compete against other users.
+Open your web browser and navigate to http://localhost:5000.
+Create a new lobby or join an existing one.
+Start trading and compete against other users.
