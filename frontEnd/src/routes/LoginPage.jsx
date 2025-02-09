@@ -1,13 +1,34 @@
 import React, { useState } from "react";
-import useStore from "../UseStore";
+import Cookies from 'js-cookie';
+import { sha256 } from "crypto-hash";
 function LoginPage() {
+  const apiUrl = 'http://127.0.0.1:5000';
   const [isRegister, setIsRegister] = useState(false);
   const [userName, setUserName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const { register, login } = useStore();
 
-  
+  // Register function inside the component
+  const register = async (userName, password) => {
+    const hashedPassword = await sha256(password); // Hash password
+    const response = await fetch(`${apiUrl}/registerUser`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userName, password: hashedPassword }),
+    });
+    return response.json();
+  };
+
+  const login = async (userName, password) => {
+    // Replace with your actual login function
+    const hashedPassword = await sha256(password); // Hash password
+    const response = await fetch(`${apiUrl}/loginUser`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userName, password: hashedPassword }),
+    });
+    return response.json();
+  };
 
   const handleAuth = async () => {
     if (isRegister) {
@@ -17,9 +38,19 @@ function LoginPage() {
       }
       const response = await register(userName, password);
       console.log("Register response:", response);
+
+      if (response && response.userId) {
+        // Save the user ID as a cookie after successful registration
+        Cookies.set('userId', response.userId, { expires: 7 }); // Expires in 7 days
+      }
     } else {
       const response = await login(userName, password);
       console.log("Login response:", response);
+
+      if (response && response.userId) {
+        // Save the user ID as a cookie after successful login
+        Cookies.set('userId', response.userId, { expires: 7 }); // Expires in 7 days
+      }
     }
   };
 

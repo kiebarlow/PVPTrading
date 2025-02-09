@@ -3,29 +3,44 @@ const apiUrl = 'http://127.0.0.1:5000';
 import { sha256 } from "crypto-hash";
 
 export const useStore = create((set, get) => ({
-    userName: null,  // Added userId state
+    userId: null,  // Added userId state
+    userName: null,
     userDepositAddress: null,
     userGemBalance: 0,
+    setUser: (id, name) => set({ userId: id, userName: name }),
+    clearUser: () => set({ userId: null, userName: null }),
 
     register: async (userName, password) => {
-        const hashedPassword = await sha256(password); // Hash password
-        const response = await fetch(`${apiUrl}/registerUser`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userName, password: hashedPassword }),
-        });
-        return response.json();
-      },
+      const hashedPassword = await sha256(password); // Hash password
+      const response = await fetch(`${apiUrl}/registerUser`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userName, password: hashedPassword }),
+      });
+      return response.json();
+    },
     
-      login: async (userName, password) => {
+    login: async (userName, password) => {
         const hashedPassword = await sha256(password); // Hash password
         const response = await fetch(`${apiUrl}/loginUser`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ userName, password: hashedPassword }),
         });
-        return response.json();
+        data = response
+        if (data.success) {
+          // Store the user data on successful registration
+          set({
+            userId: data.userId, // Assuming userId is returned from API
+            userName: data.userName, // Assuming userName is returned from API
+          });
+        } else {
+          // Handle registration failure (optional)
+          console.error('Registration failed:', data.message || 'Unknown error');
+        }
+        return data;
       },
+      
 
   
     checkForDeposit: async (userId) => {
@@ -40,4 +55,3 @@ export const useStore = create((set, get) => ({
   }));
 
 export default useStore;
-
