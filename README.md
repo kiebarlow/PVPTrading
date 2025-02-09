@@ -8,11 +8,10 @@ Welcome to [pvptrading.club][https://pvptrading.club], where you can test your c
 - [Features](#features)
 - [Installation](#installation)
 - [Usage](#usage)
-- [License](#license)
 
 ## Introduction
 
-PVPTrading is a platform made for Hackaway v8 that allows users to engage in competitive crypto trading. Users can create or join lobbies, trade cryptocurrencies in real-time, win the prize pool by having the highest balance when the time expires.
+PVPTrading is a platform made for Hackaway v8 using Flask and React that allows users to engage in competitive crypto trading. Users can create or join lobbies, trade cryptocurrencies in real-time, win the prize pool by having the highest balance when the time expires.
 
 ## Features
 
@@ -29,14 +28,16 @@ To get started with PVPTrading, follow these steps:
 1. Clone the repository:
     ```
     bash
-    git clone https://github.com/yourusername/PVPTrading.git
+    git clone https://github.com/kiebarlow/PVPTrading.git
     cd PVPTrading
     ```
 
 2. Install the required dependencies:
+    For the python
     ```
     pip install -r backEnd/requirements.txt
     ```
+    For the React
     ```
     cd frontEnd
     npm install
