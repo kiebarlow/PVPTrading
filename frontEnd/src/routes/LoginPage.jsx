@@ -1,12 +1,14 @@
 import React, { useState } from "react";
 import Cookies from 'js-cookie';
 import { sha256 } from "crypto-hash";
+import { useNavigate } from "react-router"
 function LoginPage() {
   const apiUrl = 'http://127.0.0.1:5000';
   const [isRegister, setIsRegister] = useState(false);
   const [userName, setUserName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const navigate = useNavigate();
 
   // Register function inside the component
   const register = async (userName, password) => {
@@ -39,17 +41,19 @@ function LoginPage() {
       const response = await register(userName, password);
       console.log("Register response:", response);
 
-      if (response && response.userId) {
+      if (response && response.userName) {
         // Save the user ID as a cookie after successful registration
-        Cookies.set('userId', response.userId, { expires: 7 }); // Expires in 7 days
+        Cookies.set('userName', response.userName);
+        navigate('/browseGames')
       }
     } else {
       const response = await login(userName, password);
       console.log("Login response:", response);
 
-      if (response && response.userId) {
+      if (response && response.userName) {
         // Save the user ID as a cookie after successful login
-        Cookies.set('userId', response.userId, { expires: 7 }); // Expires in 7 days
+        Cookies.set('userName', response.userName);
+        navigate('/browseGames')
       }
     }
   };

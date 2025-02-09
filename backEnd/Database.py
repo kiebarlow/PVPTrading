@@ -119,4 +119,12 @@ def checkUser(usrName, passwd):
     conn.close()
     return user
 
+def getUserID(usrName):
+    conn = connect()
+    cursor = conn.cursor()
+    cursor.execute()
+    usrID = cursor.fetchall("SELECT UserID FROM User WHERE UserName = ?",(usrName))
+    conn.close()
+    return usrID
+
     

@@ -225,7 +225,7 @@ def siteRegister():
         priv = user.privateKey
         createWallet(wallID, pub, priv)
         
-        return jsonify({"success": True, "message": "User registered successfully"}), 200
+        return jsonify({"success": True, "message": "User registered successfully", "userName":usrName}), 200
     else:
         return jsonify({"success": False, "message": "Username already exists"}), 400      
 
@@ -236,14 +236,11 @@ def siteLogin():
     data = request.get_json()  # Parse JSON request body
     usrName = data.get('userName')
     passwd = data.get('password')
-
     if not usrName or not passwd:
         return jsonify({"success": False, "message": "Username and password are required"}), 400
-
     user = checkUser(usrName, passwd)  # Assuming this function checks credentials
-
     if user != []:
-        return jsonify({"success": True, "message": "Login successful"}), 200
+        return jsonify({"success": True, "message": "Login successful", "userName":usrName}), 200
     else:
         return jsonify({"success": False, "message": "Invalid credentials"}), 401
     
